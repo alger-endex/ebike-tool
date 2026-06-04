@@ -378,22 +378,77 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
   if (state.busy) return;
 
   setBusy(true);
-  const list     = state.showPara ? state.paraList : state.hrList;
+
+  // ── 寫入前驗證：讀取裝置 SIG0~SIG3 與本機比對 ──────────────
+  if (state.hrList.length >= 4) {
+    log('驗證裝置 SIG...');
+    const devSigItems = [];
+    for (let i = 0; i < 4; i++) {
+      const val = await retryOp(3, () =>
+        state.isCAN
+          ? readCanParam(state.hrList[i].address)
+          : readUartParam(state.hrList[i].address)
+      );
+      if (val === null || val === false) {
+        log('❌ SIG' + i + ' 讀取失敗，中止寫入');
+        setBusy(false);
+        return;
+      }
+      devSigItems.push({ data: val });
+    }
+    const devSig   = decodeSig(devSigItems);
+    const localSig = decodeSig(state.hrList);
+    if (devSig !== localSig) {
+      log('❌ SIG 不符：裝置="' + devSig + '"  本機="' + localSig + '"，中止寫入');
+      setBusy(false);
+      return;
+    }
+    log('✅ SIG 驗證通過 "' + localSig + '"');
+  }
+  // ────────────────────────────────────────────────────────────
+
+  // 決定寫入來源清單
   // UART skips first 4 items (SIG), CAN writes all
   const startIdx = state.isCAN ? 0 : 4;
+  const countWritable = (lst) => lst.slice(startIdx).filter(item => {
+    const hr = state.hrList.find(h => h.address === item.address);
+    return !hr?.production && item.address > 0x0020;
+  }).length;
+
+  const filterNote = state.isCAN
+    ? '※ 可寫入已排除：address ≤ 0x0020、production 參數'
+    : '※ 可寫入已排除：SIG/SIN 序號（前 4 筆）、address ≤ 0x0020、production 參數';
+
+  let list = state.showPara ? state.paraList : state.hrList;
+  if (state.showPara && state.paraList.length !== state.hrList.length) {
+    const wLocal  = countWritable(state.hrList);
+    const wImport = countWritable(state.paraList);
+    const useLocal = confirm(
+      `匯入 Config 有 ${state.paraList.length} 個參數，本機有 ${state.hrList.length} 個參數。\n\n` +
+      `確定 → 本機（${state.hrList.length} 個，可寫入 ${wLocal} 個）\n` +
+      `取消 → 匯入 Config（${state.paraList.length} 個，可寫入 ${wImport} 個）\n\n` +
+      filterNote
+    );
+    list = useLocal ? state.hrList : state.paraList;
+    log('寫入來源：' + (useLocal ? `本機 (${state.hrList.length} 個，可寫入 ${wLocal} 個)` : `匯入 Config (${state.paraList.length} 個，可寫入 ${wImport} 個)`));
+  }
   const failed   = [];
   let   count    = 0;
-  const total    = list.length - startIdx;
-  const skipped = list.filter(i => i.address <= 0x0020).map(i =>
-    '0x' + i.address.toString(16).toUpperCase().padStart(4, '0'));
-  log('開始寫入... (略過唯讀地址: 0x0000–0x0020' +
-    (skipped.length ? '，共 ' + skipped.length + ' 個)' : ')'));
 
-  for (let i = startIdx; i < list.length; i++) {
-    const item   = list[i];
+  // 預先過濾實際寫入清單（排除 production 與唯讀地址 ≤ 0x0020）
+  const writeItems = list.slice(startIdx).filter(item => {
     const hrItem = state.hrList.find(h => h.address === item.address);
-    if (hrItem?.production) continue;
-    if (item.address <= 0x0020) continue;  // 0x0000–0x0020 hardware read-only
+    if (hrItem?.production) return false;
+    if (item.address <= 0x0020) return false;
+    return true;
+  });
+  const total = writeItems.length;
+  log('開始寫入... 共 ' + total + ' 個參數');
+
+  for (const item of writeItems) {
+    const hrItem  = state.hrList.find(h => h.address === item.address);
+    const addrHex = item.address.toString(16).toUpperCase().padStart(4, '0');
+    const name    = hrItem?.name ?? '';
 
     const ok = await retryOp(3, () =>
       state.isCAN
@@ -401,9 +456,10 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
         : writeUartParam(item.address, item.data)
     );
 
+    log(`  [${addrHex}] ${name} = ${item.data}  ${ok ? '✓' : '✗'}`);
+
     if (!ok) {
-      failed.push(item.address.toString(16).toUpperCase().padStart(4, '0'));
-      log(`  ${item.address.toString(16).toUpperCase().padStart(4, '0')} 無法寫入`);
+      failed.push(addrHex);
       if (failed.length >= 10) { log('10 個地址失敗，停止寫入'); break; }
     }
 
