@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Endex eBike Tool</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Top bar: serial connection ── -->
+<header class="topbar">
+  <div class="conn-panel">
+    <label class="ctrl-label">Channel
+      <select id="selChannel">
+        <option value="comport" selected>Comport</option>
+        <option value="ble">BLE</option>
+      </select>
+    </label>
+    <button id="btnOpen" class="btn btn-primary">開啟連線</button>
+    <span id="statusDot" class="status-dot" title="未連接"></span>
+    <span id="bleInfo" class="ble-info" style="display:none"></span>
+
+    <label class="ctrl-label">Protocol
+      <select id="selProtocol">
+        <option value="">-- 請選擇 --</option>
+        <option value="UART">UART</option>
+        <option value="CAN" selected>CAN</option>
+      </select>
+    </label>
+    <!-- serial-only params: hidden when BLE channel is selected -->
+    <div id="serialParams" style="display:contents">
+      <label class="ctrl-label">Baud
+        <select id="selBaudrate">
+          <option value="9600">9600</option>
+          <option value="115200" selected>115200</option>
+          <option value="460800">460800</option>
+        </select>
+      </label>
+      <label class="ctrl-label">Data
+        <select id="selDataBits">
+          <option value="8" selected>8</option>
+        </select>
+      </label>
+      <label class="ctrl-label">Stop
+        <select id="selStopBits">
+          <option value="1" selected>1</option>
+          <option value="2">2</option>
+        </select>
+      </label>
+      <label class="ctrl-label">Parity
+        <select id="selParity">
+          <option value="none" selected>None</option>
+          <option value="even">Even</option>
+          <option value="odd">Odd</option>
+        </select>
+      </label>
+    </div>
+    <button id="btnClose" class="btn">關閉</button>
+  </div>
+  <div class="app-title">Endex eBike Tool <span id="appVersion" class="version-badge"></span></div>
+</header>
+
+<!-- ── Main workspace ── -->
+<div class="workspace">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <section class="sb-section">
+      <h4 class="sb-title">設定檔</h4>
+      <div id="autoLoadStatus" class="auto-status">載入中...</div>
+      <div class="btn-row">
+        <button id="btnReloadIni"    class="btn btn-block-half" title="重新 fetch + 快取">↻ 重新載入</button>
+        <button id="btnClearIniCache" class="btn btn-block-half btn-danger-sm" title="清除 localStorage 快取">✕ 清除快取</button>
+      </div>
+      <button id="btnLoadPageIni"  class="btn btn-block btn-sm-text">手動選 page.ini</button>
+      <button id="btnLoadParamIni" class="btn btn-block btn-sm-text">手動選 parameter.ini</button>
+    </section>
+
+    <section class="sb-section">
+      <h4 class="sb-title">資料操作</h4>
+      <label class="chk-label">
+        <input type="checkbox" id="chkShowPara">
+        <span id="showParaLabel">顯示比較參數</span>
+      </label>
+      <button id="btnImport" class="btn btn-block">匯入 Config</button>
+      <button id="btnExport" class="btn btn-block">匯出 Config</button>
+      <button id="btnDiff"   class="btn btn-block btn-diff">⇄ 比對差異</button>
+    </section>
+
+    <section class="sb-section">
+      <h4 class="sb-title">裝置</h4>
+      <button id="btnRead"  class="btn btn-block btn-action">讀取參數</button>
+      <button id="btnWrite" class="btn btn-block btn-action">寫入參數</button>
+      <button id="btnDriverStatus" class="btn btn-block btn-monitor" title="即時監控裝置狀態 (CAN only)">⚡ Driver Status</button>
+    </section>
+
+    <section class="sb-section" id="burnSection">
+      <h4 class="sb-title">韌體更新</h4>
+      <button id="btnLoadHex" class="btn btn-block btn-sm-text">📂 載入 HEX 檔</button>
+      <div id="hexFileName" class="hex-filename">未載入</div>
+      <div id="hexFileInfo" class="hex-fileinfo"></div>
+      <button id="btnCheckFw" class="btn btn-block" disabled>🔍 確認 Firmware 狀態</button>
+      <div class="field-row">
+        <span class="field-lbl">方式</span>
+        <select id="selBurnMode">
+          <option value="uart">標準</option>
+          <option value="blecan">BLE-CAN</option>
+        </select>
+      </div>
+      <button id="btnBurn" class="btn btn-block btn-burn" disabled>⚡ 開始燒錄</button>
+      <div class="burn-progress-wrap">
+        <div id="burnProgressBar" class="burn-progress-fill"></div>
+        <span id="burnProgressLabel" class="burn-progress-label"></span>
+      </div>
+    </section>
+
+    <section class="sb-section" id="engSection">
+      <h4 class="sb-title">工程</h4>
+      <button id="btnConfig" class="btn btn-block">參數配置</button>
+      <div class="field-row">
+        <span class="field-lbl">SIG</span>
+        <input type="text" id="tboxSIG" maxlength="8" spellcheck="false">
+      </div>
+      <div class="field-row">
+        <span class="field-lbl">SN</span>
+        <input type="text" id="tboxSN" maxlength="16" spellcheck="false">
+      </div>
+    </section>
+
+    <!-- Production fields — hidden by default (Ctrl+P to show) -->
+    <section class="sb-section prod-section" id="prodSection" style="display:none">
+      <h4 class="sb-title">生產資訊 (Ctrl+L 隱藏)</h4>
+      <div class="field-row"><span class="field-lbl">Place</span>   <input type="text" id="tboxPlace"    maxlength="2"  spellcheck="false" placeholder="XX"></div>
+      <div class="field-row"><span class="field-lbl">ToolNo</span>  <input type="text" id="tboxToolNo"   maxlength="2"  spellcheck="false" placeholder="XX"></div>
+      <div class="field-row"><span class="field-lbl">Person</span>  <input type="text" id="tboxPerson"   maxlength="1"  spellcheck="false" placeholder="X"></div>
+      <div class="field-row"><span class="field-lbl">Date</span>    <input type="text" id="tboxDate"     maxlength="6"  spellcheck="false" placeholder="YYMMDD"></div>
+      <div class="field-row"><span class="field-lbl">SerialNo</span><input type="text" id="tboxSerialNo" maxlength="5"  spellcheck="false" placeholder="XXXXX"></div>
+    </section>
+
+    <div class="mode-badge" id="modeBadge">Engineering</div>
+
+    <div class="sb-hint">
+      Ctrl+E 工程模式<br>
+      Ctrl+U 使用者模式<br>
+      Ctrl+P 生產資訊<br>
+      Ctrl+S 切換SIG編輯<br>
+      Ctrl+D Debug模式<br>
+    </div>
+  </aside>
+
+  <!-- Tab / parameter area -->
+  <main class="main-area">
+    <div id="emptyHint" class="empty-hint">請先載入 page.ini 與 parameter.ini</div>
+    <div id="tabControl" class="tab-control" style="display:none">
+      <div id="tabBar"    class="tab-bar"></div>
+      <div id="tabPanels" class="tab-panels"></div>
+    </div>
+  </main>
+
+</div><!-- .workspace -->
+
+<!-- ── Status bar ── -->
+<footer class="statusbar">
+  <div class="progress-track">
+    <div id="progressBar" class="progress-fill"></div>
+    <span id="progressLabel" class="progress-label"></span>
+  </div>
+  <!-- Status/Debug tab bar -->
+  <div class="log-tabbar">
+    <button class="log-tab active" data-panel="statusLog">狀態記錄</button>
+    <button class="log-tab" data-panel="debugPanel">Debug 序列埠</button>
+    <span id="debugBadge" class="debug-badge" style="display:none">●</span>
+    <span class="log-tab-spacer"></span>
+    <button id="btnClearLog" class="btn-tiny" title="清除">清除</button>
+    <button id="btnDebugToggle" class="btn-tiny debug-off" title="Ctrl+D">Debug OFF</button>
+  </div>
+  <!-- Status log -->
+  <textarea id="statusLog"  class="status-log active-panel" readonly></textarea>
+  <!-- Debug panel -->
+  <div      id="debugPanel" class="status-log debug-panel" style="display:none">
+    <div id="debugLog" class="debug-log"></div>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════
+     SetBit modal
+     ══════════════════════════════════════════════════════ -->
+<div id="modalSetBit" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span id="setbitTitle">位元設定</span>
+      <button class="modal-x" data-close="modalSetBit">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="setbitGrid" class="setbit-grid"></div>
+      <div id="setbitPreview" class="setbit-preview">HEX: 0000</div>
+    </div>
+    <div class="modal-ftr">
+      <button id="btnSetbitOK"   class="btn btn-primary">確定</button>
+      <button class="btn" data-close="modalSetBit">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     Config editor modal
+     ══════════════════════════════════════════════════════ -->
+<div id="modalConfig" class="modal-overlay" style="display:none">
+  <div class="modal-box modal-xl">
+    <div class="modal-hdr">
+      <span>參數配置 (parameter.ini)</span>
+      <button class="modal-x" data-close="modalConfig">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="configTableWrap" class="cfg-table-wrap">
+        <!-- Table injected by JS -->
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button id="btnConfigOK"  class="btn btn-primary">確定 &amp; 儲存</button>
+      <button id="btnConfigDel" class="btn btn-danger" >刪除選取行</button>
+      <button id="btnConfigAdd" class="btn"            >新增行</button>
+      <button class="btn" data-close="modalConfig">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     Diff modal
+     ══════════════════════════════════════════════════════ -->
+<div id="modalDiff" class="modal-overlay" style="display:none">
+  <div class="modal-box modal-xl">
+    <div class="modal-hdr">
+      <span>比對差異</span>
+      <button class="modal-x" data-close="modalDiff">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Source selectors -->
+      <div class="diff-src-row">
+        <span class="diff-src-lbl">來源 A：</span>
+        <select id="diffSrcA" class="diff-src-sel"></select>
+        <span class="diff-vs-sep">vs</span>
+        <span class="diff-src-lbl">來源 B：</span>
+        <select id="diffSrcB" class="diff-src-sel"></select>
+      </div>
+      <!-- Summary bar -->
+      <div id="diffSummary" class="diff-summary"></div>
+      <!-- Filter buttons -->
+      <div class="diff-filter-bar">
+        <button class="diff-filter active" data-filter="all" >全部</button>
+        <button class="diff-filter"        data-filter="diff">僅差異</button>
+        <button class="diff-filter"        data-filter="same">僅相同</button>
+        <button class="diff-filter"        data-filter="miss">缺少參數</button>
+      </div>
+      <!-- Table -->
+      <div class="cfg-table-wrap" id="diffTableWrap"></div>
+    </div>
+    <div class="modal-ftr">
+      <button id="btnDiffExport" class="btn btn-action">匯出差異報告 (.txt)</button>
+      <button class="btn" data-close="modalDiff">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     Driver Status modal
+     ══════════════════════════════════════════════════════ -->
+<div id="modalDriverStatus" class="modal-overlay" style="display:none">
+  <div class="modal-box modal-xl">
+    <div class="modal-hdr">
+      <span>Driver Status — 即時監控 <span class="drv-can-badge">CAN only</span></span>
+      <div class="drv-hdr-ctrl">
+        <label class="chk-label"><input type="checkbox" id="chkPushAssist"><span>助行</span></label>
+        <label class="chk-label"><input type="checkbox" id="chkDrvLog"><span>Log 電流</span></label>
+        <button id="btnDrvMonitor" class="btn btn-action">▶ 開始監控</button>
+        <button class="modal-x" data-close="modalDriverStatus">×</button>
+      </div>
+    </div>
+    <div class="modal-body drv-body">
+
+      <!-- ── 即時數值 ── -->
+      <div class="drv-metrics">
+        <div class="drv-card"><div class="drv-lbl">Bike Speed</div>    <div id="drvBikeSpeed"     class="drv-val">—</div><div class="drv-unit">km/h</div></div>
+        <div class="drv-card"><div class="drv-lbl">Drive Current</div>  <div id="drvDriveCurrent"  class="drv-val">—</div><div class="drv-unit">A</div></div>
+        <div class="drv-card"><div class="drv-lbl">Drive Voltage</div>  <div id="drvDriveVoltage" class="drv-val">—</div><div class="drv-unit">V</div></div>
+        <div class="drv-card"><div class="drv-lbl">Driver Temp</div>    <div id="drvDriverTemp"    class="drv-val">—</div><div class="drv-unit">°C</div></div>
+        <div class="drv-card"><div class="drv-lbl">Motor Temp</div>     <div id="drvMotorTemp"     class="drv-val">—</div><div class="drv-unit">°C</div></div>
+        <div class="drv-card"><div class="drv-lbl">Total Assist</div>   <div id="drvTotalAssist"   class="drv-val">—</div><div class="drv-unit">digit</div></div>
+        <div class="drv-card"><div class="drv-lbl">Assist Level</div>   <div id="drvAssistLevel"   class="drv-val">—</div><div class="drv-unit">digit</div></div>
+        <div class="drv-card"><div class="drv-lbl">Pedal Torque</div>   <div id="drvPedalTorque"   class="drv-val">—</div><div class="drv-unit">Nm</div></div>
+        <div class="drv-card"><div class="drv-lbl">Pedal Cadence</div>  <div id="drvPedalCadence"  class="drv-val">—</div><div class="drv-unit">rpm</div></div>
+        <div class="drv-card"><div class="drv-lbl">Pedal Power</div>    <div id="drvPedalPower"    class="drv-val">—</div><div class="drv-unit">W</div></div>
+        <div class="drv-card"><div class="drv-lbl">Motor Ph.Curr</div>  <div id="drvMotorPhaseCurr" class="drv-val">—</div><div class="drv-unit">A</div></div>
+        <div class="drv-card"><div class="drv-lbl">Single Trip</div>    <div id="drvSingleTrip"    class="drv-val">—</div><div class="drv-unit">km</div></div>
+        <div class="drv-card"><div class="drv-lbl">Remain Dist</div>    <div id="drvRemainDist"    class="drv-val">—</div><div class="drv-unit">km</div></div>
+      </div>
+
+      <!-- ── 暫存器位元 ── -->
+      <div class="drv-registers">
+
+        <!-- Fault Register 12-bit -->
+        <div class="drv-reg-box">
+          <div class="drv-reg-title">Fault Register (12-bit)</div>
+          <div id="drvFault">
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit0  Over Current Protection</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit1  Over Voltage Protection</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit2  Under Voltage Protection</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit3  Opamp Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit4  Hall Connection Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit5  Phase Line Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit6  E-Lock Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit7  Cadence Sensor Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit8  Torque Sensor Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit9  Throttle Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit10 Hall Transition Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit11 Communication Error</span></div>
+          </div>
+        </div>
+
+        <!-- DRV Register 5-bit -->
+        <div class="drv-reg-box">
+          <div class="drv-reg-title">DRV Register (5-bit)</div>
+          <div id="drvDRV">
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit0  Drive Over Temperature</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit1  Motor Over Temperature</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit2  Motor Stuck Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit3  Hub Lock Error</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit4  Wheel Sensor Error</span></div>
+          </div>
+        </div>
+
+        <!-- Status Register 8-bit -->
+        <div class="drv-reg-box">
+          <div class="drv-reg-title">Drv Status Register (8-bit)</div>
+          <div id="drvStatus">
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit0  Drive Initial (0=init 1=Ready)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit1  Motor (0=Stop 1=Running)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit2  E-Lock (0=Unlock 1=Lock)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit3  Push Assist (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit4  Lock (0=Unlock 1=Lock)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit5  Battery Lock (0=Unlock 1=Lock)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit6  Boost (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit7  Driver Reduction (0=Normal 1=Reduction)</span></div>
+          </div>
+        </div>
+
+        <!-- Peripheral Register 8-bit -->
+        <div class="drv-reg-box">
+          <div class="drv-reg-title">Drv Peripheral Register (8-bit)</div>
+          <div id="drvPepherial">
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit0  Head Light (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit1  Rear Light (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit2  DR Light (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind drv-ok"></span><span>bit3  Break Light (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit4  —</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit5  Brake (0=Off 1=On)</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit6  —</span></div>
+            <div class="drv-bit-row"><span class="drv-bit-ind"></span><span>bit7  Kick Stand (0=Up 1=Down)</span></div>
+          </div>
+        </div>
+
+      </div><!-- .drv-registers -->
+    </div><!-- .modal-body -->
+    <div class="modal-ftr">
+      <button id="btnDrvLogExport" class="btn btn-action" disabled>⬇ 下載電流 Log (.csv)</button>
+      <span id="drvLogCount" class="drv-log-count">0 筆</span>
+      <button class="btn" data-close="modalDriverStatus">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/ini.js"></script>
+<script src="js/protocol.js"></script>
+<script src="js/serial.js"></script>
+<script src="js/ble.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

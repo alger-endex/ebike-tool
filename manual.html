@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endex eBike Tool — 操作說明書 v1.2.0</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f7fa;--bg3:#eef1f6;
+  --border:#d0d7e2;--accent:#2563eb;--accent2:#1d4ed8;
+  --danger:#dc2626;--success:#16a34a;--warn:#d97706;
+  --text:#1e293b;--text-dim:#64748b;--mono:'Consolas','Courier New',monospace;
+  --font:'Segoe UI','Microsoft JhengHei',sans-serif;
+  --radius:6px;
+}
+body{font-family:var(--font);font-size:14px;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.page{max-width:900px;margin:0 auto;padding:32px 24px 80px}
+
+/* Cover */
+.cover{text-align:center;padding:48px 0 36px;border-bottom:2px solid var(--border);margin-bottom:40px}
+.cover-logo{font-size:36px;font-weight:700;color:var(--accent);letter-spacing:-1px}
+.cover-sub{font-size:18px;color:var(--text-dim);margin-top:6px}
+.cover-ver{display:inline-block;background:var(--accent);color:#fff;border-radius:20px;padding:3px 14px;font-size:13px;margin-top:12px;font-weight:600}
+.cover-date{font-size:12px;color:var(--text-dim);margin-top:8px}
+
+/* TOC */
+.toc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:40px}
+.toc h2{font-size:14px;font-weight:700;color:var(--text-dim);letter-spacing:.06em;margin-bottom:12px}
+.toc ol{padding-left:20px}
+.toc li{padding:2px 0;font-size:13px}
+.toc a{color:var(--text)}
+.toc a:hover{color:var(--accent)}
+.toc .sub{padding-left:20px;list-style:disc}
+
+/* Headings */
+body{counter-reset:section}
+h1{font-size:22px;font-weight:700;color:var(--accent2);border-bottom:2px solid var(--accent);padding-bottom:6px;margin:40px 0 16px;counter-increment:section;counter-reset:subsection}
+h1::before{content:counter(section)".  ";color:var(--accent)}
+h2{font-size:16px;font-weight:700;margin:24px 0 10px;color:var(--text);counter-increment:subsection}
+h2::before{content:counter(section)"."counter(subsection)"  ";color:var(--text-dim)}
+h3{font-size:14px;font-weight:700;margin:18px 0 8px;color:var(--text-dim)}
+p{margin:8px 0}
+ul,ol{padding-left:20px;margin:8px 0}
+li{margin:3px 0}
+
+/* Boxes */
+.box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin:12px 0}
+.box-warn{border-color:#fbbf24;background:#fffbeb}
+.box-info{border-color:#7dd3fc;background:#f0f9ff}
+.box-tip{border-color:#86efac;background:#f0fdf4}
+.box-danger{border-color:#fca5a5;background:#fef2f2}
+.box-label{font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px}
+.box-warn .box-label{color:#92400e}
+.box-info .box-label{color:#075985}
+.box-tip  .box-label{color:#166534}
+.box-danger .box-label{color:#991b1b}
+
+code{font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:12px;color:#c7253e}
+pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow-x:auto;margin:10px 0}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th{background:var(--bg3);font-weight:600;text-align:left;padding:7px 10px;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);vertical-align:top}
+tr:nth-child(even) td{background:var(--bg2)}
+
+/* Kbd */
+kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bottom:3px solid #94a3b8;border-radius:4px;padding:1px 7px;font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.6}
+
+/* Steps */
+.steps{margin:12px 0}
+.step{display:flex;gap:14px;margin:10px 0;align-items:flex-start}
+.step-num{min-width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-body{flex:1;padding-top:4px}
+
+/* Badge */
+.badge{display:inline-block;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:600;vertical-align:middle}
+.badge-uart{background:#dbeafe;color:#1e40af}
+.badge-can{background:#dcfce7;color:#166534}
+
+@media print{.toc{page-break-after:always}h1{page-break-before:always}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-logo">Endex eBike Tool</div>
+  <div class="cover-sub">電動自行車控制器參數設定工具</div>
+  <div class="cover-ver">操作說明書 v1.2.0</div>
+  <div class="cover-date">2026-06-02</div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h2>目　錄</h2>
+  <ol>
+    <li><a href="#s1">系統需求</a></li>
+    <li><a href="#s2">介面概覽</a>
+      <ol class="sub">
+        <li><a href="#s2-1">頂部列</a></li>
+        <li><a href="#s2-2">側邊欄各區塊</a></li>
+        <li><a href="#s2-3">主要區域（參數頁籤）</a></li>
+        <li><a href="#s2-4">底部狀態列</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">序列埠連線</a></li>
+    <li><a href="#s4">設定檔載入（INI）</a></li>
+    <li><a href="#s5">讀取裝置參數</a></li>
+    <li><a href="#s6">寫入裝置參數</a></li>
+    <li><a href="#s7">匯入 / 匯出 Config</a></li>
+    <li><a href="#s8">比對差異</a></li>
+    <li><a href="#s9">位元設定 (SetBit)</a></li>
+    <li><a href="#s10">參數配置編輯器</a></li>
+    <li><a href="#s11">Driver Status 即時監控</a></li>
+    <li><a href="#s12">韌體更新（Burn）</a>
+      <ol class="sub">
+        <li><a href="#s12-1">載入 HEX 檔</a></li>
+        <li><a href="#s12-2">確認 Firmware 狀態</a></li>
+        <li><a href="#s12-3">執行燒錄</a></li>
+        <li><a href="#s12-4">停止燒錄</a></li>
+        <li><a href="#s12-5">UART / CAN 燒錄差異</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">工程模式 / 使用者模式 / 生產模式</a></li>
+    <li><a href="#s14">快捷鍵一覽</a></li>
+    <li><a href="#s15">Debug 序列埠</a></li>
+    <li><a href="#s16">疑難排解</a></li>
+  </ol>
+</div>
+
+<!-- S1 -->
+<h1 id="s1">系統需求</h1>
+<table>
+  <tr><th>項目</th><th>需求</th></tr>
+  <tr><td>瀏覽器</td><td>Google Chrome 89+ 或 Microsoft Edge 89+（需支援 Web Serial API）</td></tr>
+  <tr><td>作業系統</td><td>Windows / macOS / Linux（需安裝 USB‑Serial 驅動程式）</td></tr>
+  <tr><td>開啟方式</td><td>透過 <code>http://</code> 或 <code>https://</code> 伺服器，或直接開啟本機 HTML 檔</td></tr>
+  <tr><td>硬體介面</td><td>USB 轉 UART 或 USB 轉 CAN 序列介面卡</td></tr>
+</table>
+<div class="box box-warn">
+  <div class="box-label">⚠ 注意</div>
+  Firefox 不支援 Web Serial API，無法使用本工具。頁面若顯示「此瀏覽器不支援 Web Serial API」，請改用 Chrome 或 Edge。
+</div>
+
+<!-- S2 -->
+<h1 id="s2">介面概覽</h1>
+
+<h2 id="s2-1">頂部列</h2>
+<table>
+  <tr><th>元件</th><th>說明</th></tr>
+  <tr><td>開啟序列埠</td><td>彈出瀏覽器 COM Port 選擇視窗，選擇介面卡後確認連線</td></tr>
+  <tr><td>● 狀態燈</td><td>灰色＝未連線　綠色＝已連線</td></tr>
+  <tr><td>Protocol</td><td>選擇通訊協議：<code>UART</code> 或 <code>CAN</code>（預設 CAN）</td></tr>
+  <tr><td>Baud</td><td>鮑率選擇（UART 預設 9600；CAN 自動升至 460800）</td></tr>
+  <tr><td>Data / Stop / Parity</td><td>資料位元、停止位元、奇偶校驗（一般使用預設 8N1）</td></tr>
+  <tr><td>關閉</td><td>關閉目前序列埠連線</td></tr>
+  <tr><td>版本徽章</td><td>工具版本號顯示</td></tr>
+</table>
+
+<h2 id="s2-2">側邊欄各區塊</h2>
+
+<h3>① 設定檔</h3>
+<table>
+  <tr><th>按鈕</th><th>功能</th></tr>
+  <tr><td>↻ 重新載入</td><td>重新從伺服器 fetch page.ini 與 parameter.ini，更新 localStorage 快取</td></tr>
+  <tr><td>✕ 清除快取</td><td>清除 localStorage 快取，下次開啟時重新下載</td></tr>
+  <tr><td>手動選 page.ini</td><td>從本機選擇 page.ini 覆蓋載入（頁籤定義）</td></tr>
+  <tr><td>手動選 parameter.ini</td><td>從本機選擇 parameter.ini 覆蓋載入（參數定義）</td></tr>
+</table>
+
+<h3>② 資料操作</h3>
+<table>
+  <tr><th>元件</th><th>功能</th></tr>
+  <tr><td>顯示比較參數 ☑</td><td>勾選後匯入的 Config 存為第二組 (import2)，用於差異比對</td></tr>
+  <tr><td>匯入 Config</td><td>從本機選擇 CONFIG.txt 載入至目前資料組</td></tr>
+  <tr><td>匯出 Config</td><td>將目前所有參數值匯出為 CONFIG.txt 並下載</td></tr>
+  <tr><td>⇄ 比對差異</td><td>開啟差異比對視窗（需至少兩組資料）</td></tr>
+</table>
+
+<h3>③ 裝置</h3>
+<table>
+  <tr><th>按鈕</th><th>功能</th></tr>
+  <tr><td>讀取參數</td><td>逐一從裝置讀回所有參數值，更新頁籤顯示</td></tr>
+  <tr><td>寫入參數</td><td>將 UI 上的參數值寫入裝置並執行 SAVE（CAN 另執行 RELOAD）</td></tr>
+  <tr><td>⚡ Driver Status</td><td>開啟即時監控視窗（僅 CAN 模式）</td></tr>
+</table>
+
+<h3>④ 韌體更新</h3>
+<table>
+  <tr><th>元件</th><th>功能</th></tr>
+  <tr><td>📂 載入 HEX 檔</td><td>選擇韌體 HEX 檔案，解析 SIG 與版本號</td></tr>
+  <tr><td>檔名 / 版本資訊</td><td>顯示已載入檔名、新版本號、行數、位元組數</td></tr>
+  <tr><td>🔍 確認 Firmware 狀態</td><td>查詢裝置目前執行模式，不執行燒錄</td></tr>
+  <tr><td>⚡ 開始燒錄</td><td>執行完整燒錄流程；進行中顯示「⏹ 停止燒錄」</td></tr>
+  <tr><td>進度條</td><td>顯示燒錄進度百分比與已傳/總量</td></tr>
+</table>
+
+<h3>⑤ 工程（Engineering 模式顯示）</h3>
+<table>
+  <tr><th>元件</th><th>功能</th></tr>
+  <tr><td>參數配置</td><td>開啟 parameter.ini 視覺化編輯器</td></tr>
+  <tr><td>SIG 輸入框</td><td>8 字元裝置識別碼（預設唯讀，Ctrl+S 解鎖編輯）</td></tr>
+  <tr><td>SN 輸入框</td><td>16 字元序號（預設唯讀）</td></tr>
+</table>
+
+<h3>⑥ 生產資訊（Ctrl+P 顯示 / Ctrl+L 隱藏）</h3>
+<table>
+  <tr><th>欄位</th><th>長度</th><th>說明</th></tr>
+  <tr><td>Place</td><td>2 字元</td><td>生產地點代碼</td></tr>
+  <tr><td>ToolNo</td><td>2 字元</td><td>工具編號</td></tr>
+  <tr><td>Person</td><td>1 字元</td><td>人員代碼</td></tr>
+  <tr><td>Date</td><td>6 字元</td><td>生產日期 YYMMDD</td></tr>
+  <tr><td>SerialNo</td><td>5 字元</td><td>流水序號</td></tr>
+</table>
+<p>各欄位輸入後按 <kbd>Enter</kbd> 自動更新 SN 對應位置。</p>
+
+<h2 id="s2-3">主要區域（參數頁籤）</h2>
+<p>由 <code>page.ini</code> 動態產生的頁籤，每個頁籤對應一組參數。點擊頁籤名稱切換顯示。</p>
+<p>每列參數包含：<strong>名稱</strong>、<strong>數值輸入框</strong>（或「位元設定」按鈕）、<strong>單位</strong>、<strong>十六進位核取方塊</strong>。</p>
+
+<h2 id="s2-4">底部狀態列</h2>
+<table>
+  <tr><th>元件</th><th>說明</th></tr>
+  <tr><td>主進度條</td><td>讀取 / 寫入參數時的整體進度百分比</td></tr>
+  <tr><td>狀態記錄 分頁</td><td>所有操作訊息與錯誤的文字記錄</td></tr>
+  <tr><td>Debug 序列埠 分頁</td><td>TX/RX 原始位元組十六進位日誌（需開啟 Debug 模式）</td></tr>
+  <tr><td>清除</td><td>清空目前顯示的記錄</td></tr>
+  <tr><td>Debug OFF / ON</td><td>切換序列埠 Debug 日誌（同 <kbd>Ctrl</kbd>+<kbd>D</kbd>）</td></tr>
+</table>
+
+<!-- S3 -->
+<h1 id="s3">序列埠連線</h1>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">確認 USB‑Serial 介面卡已插入電腦，驅動程式已安裝，裝置管理員中可看到對應 COM Port。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">頂部列選擇 <strong>Protocol</strong>：<code>UART</code> 或 <code>CAN</code>。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">（選填）調整 Baud、Data、Stop、Parity。CAN 模式若設為 9600 系統自動升至 460800。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">點擊「<strong>開啟序列埠</strong>」，瀏覽器彈出選擇視窗，選取對應介面卡後確定。</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body">狀態燈變綠，狀態記錄顯示 <code>serialPort open success</code>（UART）或 <code>Set comport to Tool_R OK!</code>（CAN）。</div></div>
+</div>
+<div class="box box-warn">
+  <div class="box-label">⚠ 開啟失敗常見原因</div>
+  <ul>
+    <li>序列埠被其他程式佔用（如 Endex WinForms 工具）</li>
+    <li>裝置未連線或驅動程式未安裝</li>
+    <li>在同一頁面重複開啟（請先按「關閉」再重試）</li>
+  </ul>
+</div>
+<div class="box box-info">
+  <div class="box-label">ℹ SIG 協議比對</div>
+  連線後工具自動檢查 SIG 末字元奇偶，判斷應使用 UART 或 CAN；若與目前選擇不符會在狀態記錄提示。
+</div>
+
+<!-- S4 -->
+<h1 id="s4">設定檔載入（INI）</h1>
+<p>工具啟動時自動 fetch 同目錄的 <code>page.ini</code> 與 <code>parameter.ini</code>，並快取至 localStorage。</p>
+<h2>自動載入流程</h2>
+<ol>
+  <li>頁面載入 → fetch <code>page.ini</code> 與 <code>parameter.ini</code></li>
+  <li>成功 → 解析並更新 localStorage，顯示「自動載入成功」</li>
+  <li>失敗 → 從 localStorage 讀取舊快取；若無快取則顯示「請手動選擇 INI 檔案」</li>
+</ol>
+<h2>手動載入</h2>
+<p>點擊「手動選 page.ini」或「手動選 parameter.ini」從本機選擇對應檔案。</p>
+<h2>INI 檔案格式</h2>
+<h3>page.ini — 頁籤定義</h3>
+<pre>[Section0]
+Key_pagename=SIG Para
+Key_pagenum=00
+
+[Section1]
+Key_pagename=Motor Para
+Key_pagenum=01</pre>
+
+<h3>parameter.ini — 參數定義</h3>
+<pre>[Section0]
+Key_name=SIG0
+Key_address=0000
+Key_unit=
+Key_upperbound=65535
+Key_lowerbound=0
+Key_tooltip=bit0 Description
+Key_writeable=False
+Key_hidden=True
+Key_setbit=False
+Key_production=False</pre>
+
+<table>
+  <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+  <tr><td>Key_name</td><td>字串</td><td>參數顯示名稱</td></tr>
+  <tr><td>Key_address</td><td>4位元十六進位</td><td>裝置記憶體位址（如 <code>0000</code>）</td></tr>
+  <tr><td>Key_unit</td><td>字串</td><td>單位標籤（可空白）</td></tr>
+  <tr><td>Key_upperbound</td><td>整數 0–65535</td><td>允許輸入上限</td></tr>
+  <tr><td>Key_lowerbound</td><td>整數 0–65535</td><td>允許輸入下限</td></tr>
+  <tr><td>Key_tooltip</td><td>字串</td><td>SetBit 各 bit 描述，格式 <code>bit0 說明\nbit1 說明</code></td></tr>
+  <tr><td>Key_writeable</td><td>True/False</td><td>False＝唯讀，不寫入裝置</td></tr>
+  <tr><td>Key_hidden</td><td>True/False</td><td>True＝使用者模式下隱藏</td></tr>
+  <tr><td>Key_setbit</td><td>True/False</td><td>True＝使用位元設定視窗輸入</td></tr>
+  <tr><td>Key_production</td><td>True/False</td><td>True＝生產模式下才寫入</td></tr>
+</table>
+
+<!-- S5 -->
+<h1 id="s5">讀取裝置參數</h1>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">確認序列埠已連線（狀態燈綠色）。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊側邊欄「<strong>讀取參數</strong>」。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">工具逐一對每個參數位址發送讀取命令，進度條即時更新。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">完成後顯示「讀取完成」，各頁籤更新為裝置實際值。</div></div>
+</div>
+<div class="box box-info">
+  <div class="box-label">ℹ 連續失敗保護</div>
+  連續失敗 10 個位址後自動停止，並在狀態記錄列出失敗位址清單。
+</div>
+<h2>通訊格式</h2>
+<table>
+  <tr><th></th><th><span class="badge badge-uart">UART</span></th><th><span class="badge badge-can">CAN</span></th></tr>
+  <tr><td>讀取命令</td><td><code>3A 2B 03 04 AH AL 00 00 CRC 0D 0A</code></td><td>ID <code>0x03002050</code>，Data <code>[01 03 AH AL 00 00 00 00]</code></td></tr>
+  <tr><td>讀取回應</td><td>相同格式，Data 填入數值</td><td>ID <code>0x01005020</code>，Data <code>[01 03 AH AL DH DL 00 00]</code></td></tr>
+  <tr><td>Baud Rate</td><td>9600</td><td>460800</td></tr>
+</table>
+
+<!-- S6 -->
+<h1 id="s6">寫入裝置參數</h1>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">在各頁籤中修改參數數值（直接輸入或使用 SetBit 視窗）。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊側邊欄「<strong>寫入參數</strong>」。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">工具逐一寫入標記為 <code>Writeable=True</code> 且位址 &gt; 0x0020 的參數。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">全部寫入後自動執行 <strong>SAVE</strong>；CAN 模式額外執行 <strong>RELOAD</strong>。</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body">狀態記錄顯示「寫入完成」。</div></div>
+</div>
+<div class="box box-warn">
+  <div class="box-label">⚠ 注意事項</div>
+  <ul>
+    <li>位址 ≤ 0x0020 的參數視為唯讀，自動跳過。</li>
+    <li>標記 <code>production=True</code> 的參數在非生產模式下不寫入。</li>
+    <li>寫入後若裝置重開機前未成功 SAVE，數值會還原。</li>
+  </ul>
+</div>
+
+<!-- S7 -->
+<h1 id="s7">匯入 / 匯出 Config</h1>
+<h2>CONFIG.txt 格式</h2>
+<p>每行 8 個十六進位字元：前 4 位為位址（AAAA）、後 4 位為數值（DDDD）。</p>
+<pre>00000001
+00010064
+00020032
+0003001E</pre>
+
+<h2>匯入</h2>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">若要載入第二組比對資料，先勾選「顯示比較參數」。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>匯入 Config</strong>」，選擇 CONFIG.txt。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">工具比對位址清單，狀態記錄報告多餘或缺少的位址；頁籤數值更新。</div></div>
+</div>
+
+<h2>匯出</h2>
+<p>點擊「<strong>匯出 Config</strong>」，工具將目前所有參數值產生 CONFIG.txt 並觸發下載。</p>
+
+<!-- S8 -->
+<h1 id="s8">比對差異</h1>
+<p>最多可比對三組資料：<code>import1</code>（第一次匯入）、<code>import2</code>（勾選「顯示比較參數」後匯入）、<code>read</code>（讀取裝置）。</p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">準備至少兩組資料（任意組合的 import1 / import2 / read）。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>⇄ 比對差異</strong>」開啟視窗。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">從「來源 A」與「來源 B」下拉選單選擇要比對的兩組資料。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">使用篩選按鈕縮小顯示：「全部」「僅差異」「僅相同」「缺少參數」。</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body">（選填）點擊「<strong>匯出差異報告 (.txt)</strong>」下載文字報告。</div></div>
+</div>
+<p>比對表格欄位：位址 ｜ 名稱 ｜ 來源 A 值 ｜ 來源 B 值 ｜ 差值 (Δ) ｜ 狀態（✗差異 ✓相同 ⚠缺少）</p>
+
+<!-- S9 -->
+<h1 id="s9">位元設定 (SetBit)</h1>
+<p>當參數定義為 <code>Key_setbit=True</code> 時，數值欄顯示「位元設定」按鈕。</p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">點擊「<strong>位元設定</strong>」按鈕開啟視窗。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">視窗顯示 16 個核取方塊（bit 15 在左，bit 0 在右），每個 bit 對應 <code>Key_tooltip</code> 的說明文字。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">勾選 / 取消對應 bit，下方即時顯示合成的 HEX 值與十進位值。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">點擊「確定」套用，「取消」放棄。</div></div>
+</div>
+
+<!-- S10 -->
+<h1 id="s10">參數配置編輯器</h1>
+<p>無需手動編輯 INI 檔，直接在視覺化表格中修改參數定義。</p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">點擊側邊欄「<strong>參數配置</strong>」按鈕。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">表格呈現所有參數定義，點擊儲存格直接編輯。錯誤格式以紅色底色標示。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">「<strong>新增行</strong>」在末尾加入一筆空白參數；「<strong>刪除選取行</strong>」刪除選取的列。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">點擊「<strong>確定 &amp; 儲存</strong>」— 驗證通過後下載更新的 <code>parameter.ini</code> 並立即套用至目前工作階段。</div></div>
+</div>
+<div class="box box-tip">
+  <div class="box-label">💡 提示</div>
+  下載的 parameter.ini 應放回工具同目錄，下次開啟時自動載入新定義。
+</div>
+<h2>欄位格式驗證規則</h2>
+<table>
+  <tr><th>欄位</th><th>允許格式</th></tr>
+  <tr><td>Address</td><td>1–4 位十六進位字元（<code>0–9 A–F</code>），不區分大小寫</td></tr>
+  <tr><td>Upper / Lower Bound</td><td>整數 0–65535</td></tr>
+  <tr><td>Writeable / Hidden / SetBit</td><td><code>true</code> 或 <code>false</code>（不區分大小寫）</td></tr>
+</table>
+
+<!-- S11 -->
+<h1 id="s11">Driver Status 即時監控</h1>
+<p><span class="badge badge-can">CAN 專用</span></p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">確認 Protocol 設為 CAN 且序列埠已連線。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>⚡ Driver Status</strong>」開啟監控視窗。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">（選填）勾選「<strong>助行</strong>」啟用 Push Assist 模式。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">點擊「<strong>▶ 開始監控</strong>」，每 300 ms 自動輪詢一次。</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body">點擊「<strong>■ 停止監控</strong>」結束輪詢。</div></div>
+</div>
+
+<h2>即時數值卡片（13 項）</h2>
+<table>
+  <tr><th>指標</th><th>單位</th><th>指標</th><th>單位</th></tr>
+  <tr><td>Bike Speed</td><td>km/h</td><td>Motor Temp</td><td>°C</td></tr>
+  <tr><td>Drive Current</td><td>A</td><td>Total Assist</td><td>digit</td></tr>
+  <tr><td>Drive Voltage</td><td>V</td><td>Assist Level</td><td>digit</td></tr>
+  <tr><td>Driver Temp</td><td>°C</td><td>Pedal Torque</td><td>Nm</td></tr>
+  <tr><td>Pedal Cadence</td><td>rpm</td><td>Pedal Power</td><td>W</td></tr>
+  <tr><td>Motor Ph.Curr</td><td>A</td><td>Single Trip</td><td>km</td></tr>
+  <tr><td>Remain Dist</td><td>km</td><td></td><td></td></tr>
+</table>
+
+<h2>暫存器位元指示燈</h2>
+<p>每個 bit 旁有指示燈，亮起（藍色）表示該 bit 為 1。</p>
+<table>
+  <tr><th>暫存器</th><th>位數</th><th>各 bit 說明（bit0 → bitN）</th></tr>
+  <tr><td>Fault</td><td>12-bit</td><td>過流 ｜ 過壓 ｜ 欠壓 ｜ OpAmp ｜ Hall 斷線 ｜ 缺相 ｜ 電鎖 ｜ 踏頻感測 ｜ 扭力感測 ｜ 轉把 ｜ Hall 跳變 ｜ 通訊</td></tr>
+  <tr><td>DRV</td><td>5-bit</td><td>驅動器過溫 ｜ 馬達過溫 ｜ 馬達堵轉 ｜ 輪轂鎖死 ｜ 車速感測</td></tr>
+  <tr><td>Drv Status</td><td>8-bit</td><td>初始化完成 ｜ 馬達運轉 ｜ 電鎖 ｜ 助行 ｜ 鎖定 ｜ 電池鎖 ｜ Boost ｜ 降功率</td></tr>
+  <tr><td>Peripheral</td><td>8-bit</td><td>前燈 ｜ 後燈 ｜ DR燈 ｜ 煞車燈 ｜ — ｜ 煞車 ｜ — ｜ 腳架</td></tr>
+</table>
+
+<h2>電流記錄與匯出</h2>
+<p>勾選「<strong>Log 電流</strong>」後每次輪詢自動記錄 Drive Current。點擊「<strong>⬇ 下載電流 Log (.csv)</strong>」匯出 CSV（欄位：絕對時間戳 ms、相對時間 s、電流 A）。</p>
+
+<!-- S12 -->
+<h1 id="s12">韌體更新（Burn）</h1>
+<div class="box box-danger">
+  <div class="box-label">⛔ 重要警告</div>
+  燒錄過程中請勿斷開序列埠或關閉瀏覽器，否則可能造成裝置韌體損毀，需重新燒錄才能恢復。
+</div>
+
+<h2 id="s12-1">載入 HEX 檔</h2>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">點擊「<strong>📂 載入 HEX 檔</strong>」，選擇 <code>.hex</code> 或 <code>.txt</code> 格式的韌體檔案。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">工具解析第一行取得 SIG 與版本號，格式：<code>@@&lt;SIG8字元&gt;v&lt;VV&gt;.&lt;vv&gt;</code>。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">成功後顯示檔名、新版本號、行數、位元組數；「確認 Firmware 狀態」與「開始燒錄」按鈕啟用。</div></div>
+</div>
+<div class="box box-info">
+  <div class="box-label">ℹ HEX 檔格式說明</div>
+  工具讀取所有行，遇 <code>@$</code> 開頭行則截止（含該行）。UART 燒錄只處理 <code>:</code> 或 <code>@</code> 開頭的行；CAN 燒錄傳送整個檔案文字。
+</div>
+
+<h2 id="s12-2">確認 Firmware 狀態</h2>
+<p>點擊「<strong>🔍 確認 Firmware 狀態</strong>」，向裝置查詢目前執行模式（無燒錄動作）。</p>
+<table>
+  <tr><th>狀態記錄顯示</th><th>說明</th></tr>
+  <tr><td>✅ Bootloader（可燒錄）</td><td>裝置在 Bootloader 模式，可直接執行燒錄</td></tr>
+  <tr><td>✅ App（正常運行中）</td><td>裝置在 App 模式，燒錄前工具會自動跳轉至 Bootloader</td></tr>
+  <tr><td>❌ 無回應 / SIG 不符</td><td>逾時或 SIG 識別碼不匹配，需確認協議與連線</td></tr>
+</table>
+
+<h2 id="s12-3">執行燒錄</h2>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">確認序列埠已連線且已載入正確 HEX 檔。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>⚡ 開始燒錄</strong>」。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">工具自動執行以下流程，可在狀態記錄觀察進度：
+    <ol style="margin-top:8px">
+      <li>解析 SIG → 查詢 Firmware 狀態</li>
+      <li>若在 App → Jump to BootLoader → 再次確認進入 Bootloader</li>
+      <li>逐行（UART）或分段（CAN）傳送韌體資料，進度條更新</li>
+      <li>燒錄完成 → Jump to App → 確認進入 App 模式</li>
+      <li>顯示 <code>✅ Burn Finished!</code></li>
+    </ol>
+  </div></div>
+</div>
+<div class="box box-info">
+  <div class="box-label">ℹ 重試機制</div>
+  <ul>
+    <li><span class="badge badge-uart">UART</span> 單行 ACK 錯誤最多重試 10 次；逾時或整體 CRC 錯誤時無限重試（每次等待 3 秒）。</li>
+    <li><span class="badge badge-can">CAN</span> ACK 失敗最多整體重試 5 次，超過後放棄並報錯。</li>
+  </ul>
+</div>
+
+<h2 id="s12-4">停止燒錄</h2>
+<p>燒錄進行中，按鈕變為「<strong>⏹ 停止燒錄</strong>」（灰色）。</p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">點擊「<strong>⏹ 停止燒錄</strong>」，按鈕顯示「停止中...」並暫時 disabled。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">目前行（UART）或分段（CAN）完成後，工具在安全點偵測取消旗標，立即中止並顯示「⏹ 燒錄已終止」。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">按鈕恢復為「⚡ 開始燒錄」，可重新執行。</div></div>
+</div>
+<div class="box box-warn">
+  <div class="box-label">⚠ 注意</div>
+  中途停止後裝置可能停留在 Bootloader 或韌體不完整狀態，需重新執行完整燒錄流程。
+</div>
+
+<h2 id="s12-5">UART / CAN 燒錄差異</h2>
+<table>
+  <tr><th>項目</th><th><span class="badge badge-uart">UART</span></th><th><span class="badge badge-can">CAN</span></th></tr>
+  <tr><td>傳送單位</td><td>HEX 檔每一行（<code>:</code> 或 <code>@</code> 開頭）</td><td>整個檔案文字，每 62 bytes 一段</td></tr>
+  <tr><td>封包格式</td><td><code>[0xF1, len+2, 行資料, 0x0D 0x0A, CRC16]</code></td><td><code>[0xF1, len, 資料]</code> 切成 8-byte CAN frame (ID 0xBE)</td></tr>
+  <tr><td>ACK</td><td>6-byte 回應，byte[2]=0x30 為 OK</td><td>CAN ID 0xBF，Data[2]=0x30 為 OK</td></tr>
+  <tr><td>SIG 位元組順序</td><td>反轉（Reversed）</td><td>正向</td></tr>
+  <tr><td>Frame 間延遲</td><td>—</td><td>3 ms/frame，段後 2 ms</td></tr>
+  <tr><td>重試上限</td><td>行重試 10 次，整體無上限</td><td>整體 5 次</td></tr>
+  <tr><td>Check Firmware 命令</td><td>0xF6</td><td>CAN ID 0xB2</td></tr>
+  <tr><td>Jump to BootLoader 命令</td><td>0xF4</td><td>CAN ID 0xB4</td></tr>
+  <tr><td>Jump to App 命令</td><td>0xF3</td><td>CAN ID 0xBE [F3 00]</td></tr>
+</table>
+
+<!-- S13 -->
+<h1 id="s13">工程模式 / 使用者模式 / 生產模式</h1>
+<table>
+  <tr><th>模式</th><th>快捷鍵</th><th>顯示內容差異</th><th>徽章</th></tr>
+  <tr><td><strong>工程模式</strong>（預設）</td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>所有頁籤、所有參數（含隱藏參數）、SIG/SN 欄位</td><td>Engineering</td></tr>
+  <tr><td><strong>使用者模式</strong></td><td><kbd>Ctrl</kbd>+<kbd>U</kbd></td><td>隱藏第一頁籤（SIG 頁）、隱藏 <code>hidden=True</code> 的參數、隱藏工程區塊</td><td>User</td></tr>
+  <tr><td><strong>顯示生產資訊</strong></td><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>顯示 Place/ToolNo/Person/Date/SerialNo 輸入欄</td><td>—</td></tr>
+  <tr><td><strong>隱藏生產資訊</strong></td><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>隱藏生產資訊區塊</td><td>—</td></tr>
+</table>
+<h2>SIG 編輯</h2>
+<p>預設 SIG 輸入框為唯讀（半透明）。按 <kbd>Ctrl</kbd>+<kbd>S</kbd> 切換可編輯狀態，修改後透過「寫入參數」一起寫入裝置。</p>
+<h2>生產 SN 欄位說明</h2>
+<p>SN 為 16 字元字串，由各生產資訊欄位組合而成：</p>
+<table>
+  <tr><th>位置</th><th>來源欄位</th><th>長度</th></tr>
+  <tr><td>0–1</td><td>Place</td><td>2</td></tr>
+  <tr><td>2–3</td><td>ToolNo</td><td>2</td></tr>
+  <tr><td>4</td><td>Person</td><td>1</td></tr>
+  <tr><td>5–10</td><td>Date (YYMMDD)</td><td>6</td></tr>
+  <tr><td>11–15</td><td>SerialNo</td><td>5</td></tr>
+</table>
+
+<!-- S14 -->
+<h1 id="s14">快捷鍵一覽</h1>
+<table>
+  <tr><th>快捷鍵</th><th>功能</th></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>切換至工程模式</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>U</kbd></td><td>切換至使用者模式</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>顯示生產資訊欄位</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>隱藏生產資訊欄位</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>切換 SIG 輸入框可編輯狀態</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>開啟 / 關閉 Debug 序列埠日誌</td></tr>
+</table>
+
+<!-- S15 -->
+<h1 id="s15">Debug 序列埠</h1>
+<p>按 <kbd>Ctrl</kbd>+<kbd>D</kbd> 或點擊底部「<strong>Debug OFF</strong>」按鈕開啟 Debug 模式。</p>
+<p>切換至「<strong>Debug 序列埠</strong>」分頁，即可看到所有 TX（藍色）和 RX（綠色）的原始位元組：</p>
+<pre>[時間戳]  TX  [長度]  FA 0D BE 00 00 00 04 F1 3E ...  |  ASCII 預覽
+[時間戳]  RX  [長度]  FA 0D BF 00 00 00 03 F1 00 30   |  ASCII 預覽</pre>
+<div class="box box-tip">
+  <div class="box-label">💡 使用時機</div>
+  <ul>
+    <li>診斷讀寫失敗或 CRC 錯誤，確認封包內容是否正確。</li>
+    <li>確認裝置是否有回應（是否出現 RX 列）。</li>
+    <li>比對通訊協議選擇（UART 以 <code>3A 2B</code> 開頭；CAN 以 <code>FA 0D</code> 開頭）。</li>
+  </ul>
+</div>
+
+<!-- S16 -->
+<h1 id="s16">疑難排解</h1>
+<table>
+  <tr><th>症狀</th><th>可能原因</th><th>解決方式</th></tr>
+  <tr><td>「此瀏覽器不支援 Web Serial API」</td><td>使用 Firefox 或舊版瀏覽器</td><td>改用 Chrome 89+ 或 Edge 89+</td></tr>
+  <tr><td>序列埠開啟失敗</td><td>COM Port 被其他程式佔用</td><td>關閉 Endex WinForms 工具；或先按「關閉」再重試</td></tr>
+  <tr><td>讀取 / 寫入全部失敗</td><td>Protocol 選擇錯誤</td><td>確認裝置協議（UART/CAN），重新選擇後重新連線</td></tr>
+  <tr><td>讀取部分位址失敗</td><td>位址不存在或裝置版本不符</td><td>更新 parameter.ini 中的位址定義</td></tr>
+  <tr><td>SIG 協議不符提示</td><td>SIG 末字元與通訊協議不匹配</td><td>確認 Protocol 設定，或確認連線裝置型號</td></tr>
+  <tr><td>燒錄顯示「無回應 / SIG Error!」</td><td>HEX 檔 SIG 與裝置不符</td><td>確認 HEX 檔對應正確裝置型號；CAN 確認 Baud 460800</td></tr>
+  <tr><td>燒錄卡在「timeout, retry...」</td><td>接線不穩定；裝置未進入 Bootloader</td><td>確認接線；先執行「確認 Firmware 狀態」；停止後重新燒錄</td></tr>
+  <tr><td>燒錄後裝置無法啟動</td><td>中途停止導致韌體不完整</td><td>裝置保持在 Bootloader，重新執行完整燒錄流程</td></tr>
+  <tr><td>Driver Status 無數值更新</td><td>非 CAN 模式或裝置未連線</td><td>確認 Protocol=CAN 且序列埠已開啟</td></tr>
+  <tr><td>匯出的 CONFIG.txt 為空</td><td>未載入 INI 或未讀取 / 匯入資料</td><td>先載入 INI，執行讀取參數或匯入 Config</td></tr>
+</table>
+
+<div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
+  Endex eBike Tool 操作說明書 v1.2.0 &nbsp;｜&nbsp; 2026-06-02
+</div>
+
+</div>
+</body>
+</html>
