@@ -176,9 +176,10 @@ function refreshAllDisplays(state) {
     const isHex = item.hexChkEl && item.hexChkEl.checked;
 
     let displayData = item.data;
+    let fromPara = false;
     if (paraList) {
       const para = paraList.find(function(p) { return p.address === item.address; });
-      if (para !== undefined) displayData = para.data;
+      if (para !== undefined) { displayData = para.data; fromPara = true; }
     }
 
     const text = isHex
@@ -190,6 +191,9 @@ function refreshAllDisplays(state) {
     } else {
       item.valueEl.textContent = text;
     }
+
+    item.valueEl.classList.toggle('val-from-para',     paraList !== null &&  fromPara);
+    item.valueEl.classList.toggle('val-from-fallback', paraList !== null && !fromPara);
   });
 }
 

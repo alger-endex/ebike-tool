@@ -65,7 +65,7 @@
 <div class="workspace">
 
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
 
     <section class="sb-section">
       <h4 class="sb-title">設定檔</h4>
@@ -84,6 +84,16 @@
         <input type="checkbox" id="chkShowPara">
         <span id="showParaLabel">顯示比較參數</span>
       </label>
+      <div id="showParaLegend" class="show-para-legend">
+        <div class="legend-src-row">
+          <span class="legend-item legend-para">■ 有勾 副 — 來自 paraList</span>
+          <div class="src-row"><span class="src-key legend-para">副</span><span class="src-label">更新來源</span><span id="paraListSrc" class="src-val">—</span></div>
+        </div>
+        <div class="legend-src-row">
+          <span class="legend-item legend-fallback">■ 無勾 主 — fallback hrList</span>
+          <div class="src-row"><span class="src-key legend-fallback">主</span><span class="src-label">更新來源</span><span id="hrListSrc" class="src-val">—</span></div>
+        </div>
+      </div>
       <button id="btnImport" class="btn btn-block">匯入 Config</button>
       <button id="btnExport" class="btn btn-block">匯出 Config</button>
       <button id="btnDiff"   class="btn btn-block btn-diff">⇄ 比對差異</button>
@@ -101,7 +111,7 @@
       <button id="btnLoadHex" class="btn btn-block btn-sm-text">📂 載入 HEX 檔</button>
       <div id="hexFileName" class="hex-filename">未載入</div>
       <div id="hexFileInfo" class="hex-fileinfo"></div>
-      <button id="btnCheckFw" class="btn btn-block" disabled>🔍 確認 Firmware 狀態</button>
+      <button id="btnCheckFw" class="btn btn-block" disabled>🔍 讀取 DRV FW & 狀態</button>
       <div class="field-row">
         <span class="field-lbl">方式</span>
         <select id="selBurnMode">
@@ -149,6 +159,7 @@
       Ctrl+D Debug模式<br>
     </div>
   </aside>
+  <div class="sidebar-resizer" id="sidebarResizer"></div>
 
   <!-- Tab / parameter area -->
   <main class="main-area">

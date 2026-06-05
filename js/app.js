@@ -26,6 +26,8 @@ const state = {
   showPara:        false,   // cBoxshowpara equivalent
   fileName1: 'N/A',
   fileName2: 'N/A',
+  hrListSource:   null,   // null | 'import' | 'read'
+  paraListSource: null,   // null | 'import' | 'read'
   dataImport1: [],   // {address,data} — from last import (showPara=false)
   dataImport2: [],   // {address,data} — from last import (showPara=true)
   dataRead:    [],   // {address,data} — from last device read
@@ -287,8 +289,8 @@ document.getElementById('btnImport').addEventListener('click', () => {
       .filter(h => !found.has(h.address))
       .map(h => h.address.toString(16).toUpperCase().padStart(4, '0'));
 
-    if (!state.showPara) state.fileName1 = file.name;
-    else                 state.fileName2 = file.name;
+    if (!state.showPara) { state.fileName1 = file.name; state.hrListSource   = 'import'; }
+    else                 { state.fileName2 = file.name; state.paraListSource = 'import'; }
 
     document.getElementById('showParaLabel').textContent =
       state.showPara ? state.fileName2 : state.fileName1;
@@ -300,6 +302,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
     refreshAllDisplays(state);
     updateSigDisplay();
     updateSnDisplay();
+    updateSourceDisplay();
     checkSigProtocolMatch();
   });
 });
@@ -366,6 +369,10 @@ document.getElementById('btnRead').addEventListener('click', async () => {
 
   if (failed.length) log('讀取失敗地址: ' + failed.join(', '));
   else               log('讀取完成');
+
+  if (!state.showPara) state.hrListSource   = 'read';
+  else                 state.paraListSource = 'read';
+  updateSourceDisplay();
   setBusy(false);
 });
 
@@ -397,7 +404,8 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
       devSigItems.push({ data: val });
     }
     const devSig   = decodeSig(devSigItems);
-    const localSig = decodeSig(state.hrList);
+    const sigSource = (state.showPara && state.paraList.length >= 4) ? state.paraList : state.hrList;
+    const localSig = decodeSig(sigSource);
     if (devSig !== localSig) {
       log('❌ SIG 不符：裝置="' + devSig + '"  本機="' + localSig + '"，中止寫入');
       setBusy(false);
@@ -557,6 +565,12 @@ async function retryOp(maxRetries, fn) {
 // ─────────────────────────────────────────────────────────────
 //  SIG / SN display + editing
 // ─────────────────────────────────────────────────────────────
+function updateSourceDisplay() {
+  const labels = { null: '—', import: '匯入 Config', read: '讀取參數' };
+  document.getElementById('hrListSrc').textContent   = labels[state.hrListSource]   ?? '—';
+  document.getElementById('paraListSrc').textContent = labels[state.paraListSource] ?? '—';
+}
+
 function updateSigDisplay() {
   const list = state.showPara ? state.paraList : state.hrList;
   const sig  = decodeSig(list);
@@ -1768,3 +1782,39 @@ if (!navigator.bluetooth) {
 if (!navigator.serial && !navigator.bluetooth) {
   document.getElementById('btnOpen').disabled = true;
 }
+
+// ── Sidebar resize ──
+(function () {
+  const sidebar  = document.getElementById('sidebar');
+  const resizer  = document.getElementById('sidebarResizer');
+  const STORAGE_KEY = 'endex_sidebar_w';
+  const MIN_W = 140, MAX_W = 480;
+
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+  if (saved >= MIN_W && saved <= MAX_W) sidebar.style.width = saved + 'px';
+
+  let startX, startW;
+
+  resizer.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    resizer.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(e) {
+      const w = Math.min(MAX_W, Math.max(MIN_W, startW + e.clientX - startX));
+      sidebar.style.width = w + 'px';
+    }
+    function onUp() {
+      resizer.classList.remove('resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();

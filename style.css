@@ -117,14 +117,26 @@ body {
 /* ── Sidebar ── */
 .sidebar {
   width: var(--side-w);
+  min-width: 140px;
+  max-width: 480px;
   flex-shrink: 0;
   background: var(--bg2);
-  border-right: 1px solid var(--border);
   overflow-y: auto;
   padding: 8px 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.sidebar-resizer {
+  width: 5px;
+  flex-shrink: 0;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background .15s;
+}
+.sidebar-resizer:hover,
+.sidebar-resizer.resizing {
+  background: var(--accent);
 }
 .sb-section {
   padding: 6px 10px;
@@ -286,6 +298,44 @@ body {
 }
 .param-val-wrap input[type="text"]:focus { outline: none; border-color: var(--accent); }
 .param-val-wrap input[type="text"].out-of-range { border-color: var(--danger); }
+
+/* showPara 來源標記 */
+.val-from-para     { color: var(--accent) !important; }
+.val-from-fallback { color: var(--text-dim) !important; }
+
+.show-para-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  background: var(--bg3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.legend-item {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.legend-para     { color: var(--accent); }
+.legend-fallback { color: var(--text-dim); }
+.legend-src-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 3px;
+}
+.legend-src-row:last-child { margin-bottom: 0; }
+.src-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding-left: 10px;
+}
+.src-key   { font-weight: 700; width: 14px; flex-shrink: 0; }
+.src-label { color: var(--text-dim); flex-shrink: 0; }
+.src-val   { color: var(--text); }
 .param-val-wrap span.readonly-val {
   display: block;
   font-family: var(--mono);
