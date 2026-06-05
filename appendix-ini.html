@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endex eBike Tool — 附件：INI 設定檔規格說明</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f7fa;--bg3:#eef1f6;
+  --border:#d0d7e2;--accent:#2563eb;--accent2:#1d4ed8;
+  --danger:#dc2626;--success:#16a34a;--warn:#d97706;
+  --text:#1e293b;--text-dim:#64748b;--mono:'Consolas','Courier New',monospace;
+  --font:'Segoe UI','Microsoft JhengHei',sans-serif;
+  --radius:6px;
+}
+body{font-family:var(--font);font-size:14px;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.page{max-width:900px;margin:0 auto;padding:32px 24px 80px}
+
+/* Cover */
+.cover{text-align:center;padding:48px 0 36px;border-bottom:2px solid var(--border);margin-bottom:40px}
+.cover-logo{font-size:36px;font-weight:700;color:var(--accent);letter-spacing:-1px}
+.cover-sub{font-size:18px;color:var(--text-dim);margin-top:6px}
+.cover-ver{display:inline-block;background:var(--accent);color:#fff;border-radius:20px;padding:3px 14px;font-size:13px;margin-top:12px;font-weight:600}
+.cover-date{font-size:12px;color:var(--text-dim);margin-top:8px}
+
+/* TOC */
+.toc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:40px}
+.toc h2{font-size:14px;font-weight:700;color:var(--text-dim);letter-spacing:.06em;margin-bottom:12px}
+.toc ol{padding-left:20px}
+.toc li{padding:2px 0;font-size:13px}
+.toc a{color:var(--text)}
+.toc a:hover{color:var(--accent)}
+.toc .sub{padding-left:20px;list-style:disc}
+
+/* Headings */
+body{counter-reset:section}
+h1{font-size:22px;font-weight:700;color:var(--accent2);border-bottom:2px solid var(--accent);padding-bottom:6px;margin:40px 0 16px;counter-increment:section;counter-reset:subsection}
+h1::before{content:counter(section)".  ";color:var(--accent)}
+h2{font-size:16px;font-weight:700;margin:24px 0 10px;color:var(--text);counter-increment:subsection}
+h2::before{content:counter(section)"."counter(subsection)"  ";color:var(--text-dim)}
+h3{font-size:14px;font-weight:700;margin:18px 0 8px;color:var(--text-dim)}
+p{margin:8px 0}
+ul,ol{padding-left:20px;margin:8px 0}
+li{margin:3px 0}
+
+/* Boxes */
+.box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin:12px 0}
+.box-warn{border-color:#fbbf24;background:#fffbeb}
+.box-info{border-color:#7dd3fc;background:#f0f9ff}
+.box-tip{border-color:#86efac;background:#f0fdf4}
+.box-danger{border-color:#fca5a5;background:#fef2f2}
+.box-label{font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px}
+.box-warn .box-label{color:#92400e}
+.box-info .box-label{color:#075985}
+.box-tip  .box-label{color:#166534}
+.box-danger .box-label{color:#991b1b}
+
+code{font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:12px;color:#c7253e}
+pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow-x:auto;margin:10px 0}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th{background:var(--bg3);font-weight:600;text-align:left;padding:7px 10px;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);vertical-align:top}
+tr:nth-child(even) td{background:var(--bg2)}
+
+/* Flow diagram */
+.flow{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9;overflow-x:auto;white-space:pre}
+
+/* Address range bands */
+.addr-band{display:inline-block;background:#dbeafe;color:#1e40af;border-radius:3px;padding:1px 6px;font-family:var(--mono);font-size:12px;font-weight:600}
+
+@media print{.toc{page-break-after:always}h1{page-break-before:always}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-logo">Endex eBike Tool</div>
+  <div class="cover-sub">附件：INI 設定檔規格說明</div>
+  <div class="cover-ver">page.ini ╳ parameter.ini 對應關係</div>
+  <div class="cover-date">2026-06-05　　適用版本 v1.2.1+</div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h2>目　錄</h2>
+  <ol>
+    <li><a href="#s1">概述 — 兩個檔案的分工</a></li>
+    <li><a href="#s2">page.ini 格式規格</a>
+      <ol class="sub">
+        <li><a href="#s2-1">語法結構</a></li>
+        <li><a href="#s2-2">欄位說明</a></li>
+        <li><a href="#s2-3">完整範例</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">parameter.ini 格式規格</a>
+      <ol class="sub">
+        <li><a href="#s3-1">語法結構</a></li>
+        <li><a href="#s3-2">欄位說明</a></li>
+        <li><a href="#s3-3">完整範例</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">兩者隱式對應規則（Address Prefix Mapping）</a>
+      <ol class="sub">
+        <li><a href="#s4-1">對應規則說明</a></li>
+        <li><a href="#s4-2">現有頁籤位址範圍對照</a></li>
+        <li><a href="#s4-3">程式碼對應邏輯</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">整體資料流</a></li>
+    <li><a href="#s6">新增頁籤或參數的操作說明</a>
+      <ol class="sub">
+        <li><a href="#s6-1">新增頁籤</a></li>
+        <li><a href="#s6-2">新增參數</a></li>
+        <li><a href="#s6-3">常見錯誤與注意事項</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">HRItem 資料結構（程式端）</a></li>
+    <li><a href="#s8">INI 快取機制</a></li>
+  </ol>
+</div>
+
+<!-- S1 -->
+<h1 id="s1">概述 — 兩個檔案的分工</h1>
+<p>Endex eBike Tool 的參數顯示介面由兩個 INI 設定檔共同決定，兩者各司其職：</p>
+<table>
+  <tr><th>檔案</th><th>職責</th><th>影響範圍</th></tr>
+  <tr><td><code>page.ini</code></td><td>定義 <strong>UI 頁籤列表</strong>（Tab Bar）</td><td>頁籤數量、名稱、對應的位址前綴</td></tr>
+  <tr><td><code>parameter.ini</code></td><td>定義<strong>所有硬體暫存器參數</strong></td><td>每個參數的位址、名稱、單位、上下限、旗標</td></tr>
+</table>
+<p>兩個檔案之間<strong>沒有任何明確交叉引用欄位</strong>，參數歸屬於哪個頁籤，完全由<strong>位址前兩碼</strong>與<strong>頁籤編號</strong>的隱式對應關係決定。</p>
+<div class="box box-info">
+  <div class="box-label">ℹ 設計優點</div>
+  兩個檔案獨立修改互不干擾：新增頁籤只需修改 page.ini；新增或調整參數只需修改 parameter.ini，只要位址前兩碼吻合即自動歸類到對應頁籤。
+</div>
+
+<!-- S2 -->
+<h1 id="s2">page.ini 格式規格</h1>
+
+<h2 id="s2-1">語法結構</h2>
+<p>標準 INI 格式，每個 <code>[SectionN]</code>（N 從 0 起連續遞增）定義一個頁籤。</p>
+
+<h2 id="s2-2">欄位說明</h2>
+<table>
+  <tr><th>欄位鍵名</th><th>型別</th><th>說明</th><th>範例</th></tr>
+  <tr><td><code>Key_pagename</code></td><td>字串</td><td>頁籤按鈕顯示文字</td><td><code>Motor Para</code></td></tr>
+  <tr><td><code>Key_pagenum</code></td><td>2 位十六進位字串</td><td>頁籤對應的位址前綴，也作為位址範圍篩選依據</td><td><code>01</code></td></tr>
+</table>
+<div class="box box-warn">
+  <div class="box-label">⚠ 注意</div>
+  <ul>
+    <li><code>Key_pagenum</code> 必須恰好 2 位十六進位字元（<code>00</code>–<code>FF</code>），不可為 1 位或 3 位以上。</li>
+    <li><code>[Section0]</code> 固定對應 SIG 頁籤（pagenum <code>00</code>），在使用者模式下會隱藏。</li>
+    <li>Section 編號必須從 0 連續遞增，不可跳號；解析器遇到第一個缺少的 SectionN 即停止。</li>
+  </ul>
+</div>
+
+<h2 id="s2-3">完整範例</h2>
+<pre>[Section0]
+Key_pagename = SIG Para
+Key_pagenum= 00
+
+[Section1]
+Key_pagename = Motor Para
+Key_pagenum= 01
+
+[Section2]
+Key_pagename = Bike Para
+Key_pagenum= 02
+
+[Section3]
+Key_pagename = Assist Para
+Key_pagenum= 03
+
+[Section4]
+Key_pagename = Pedal Sensor
+Key_pagenum= 04
+
+[Section5]
+Key_pagename = Throttle Para
+Key_pagenum= 05</pre>
+
+<!-- S3 -->
+<h1 id="s3">parameter.ini 格式規格</h1>
+
+<h2 id="s3-1">語法結構</h2>
+<p>標準 INI 格式，每個 <code>[SectionN]</code>（N 從 0 起連續遞增）定義一個參數（HRItem）。</p>
+
+<h2 id="s3-2">欄位說明</h2>
+<table>
+  <tr><th>欄位鍵名</th><th>型別</th><th>說明</th></tr>
+  <tr><td><code>Key_name</code></td><td>字串</td><td>參數顯示名稱，出現在 UI 每列的左側</td></tr>
+  <tr><td><code>Key_address</code></td><td>4 位十六進位字串</td><td>裝置記憶體位址，<strong>前兩碼決定所屬頁籤</strong>（如 <code>0101</code> → 頁籤 <code>01</code>）</td></tr>
+  <tr><td><code>Key_unit</code></td><td>字串（可空白）</td><td>顯示於數值右側的單位標籤（如 <code>0.1V</code>、<code>0.01A</code>）</td></tr>
+  <tr><td><code>Key_upperbound</code></td><td>整數 0–65535</td><td>UI 輸入上限；超出時以紅底提示並 clamp 至此值</td></tr>
+  <tr><td><code>Key_lowerbound</code></td><td>整數 0–65535</td><td>UI 輸入下限</td></tr>
+  <tr><td><code>Key_tooltip</code></td><td>字串（<code>\n</code> 換行）</td><td>滑鼠懸停提示；若 <code>Key_setbit=True</code>，格式必須為 <code>bitN 說明</code> 以供 SetBit 視窗解析</td></tr>
+  <tr><td><code>Key_writeable</code></td><td><code>True</code> / <code>False</code></td><td><code>False</code>＝唯讀（顯示為 <code>&lt;span&gt;</code>，不寫入裝置）</td></tr>
+  <tr><td><code>Key_hidden</code></td><td><code>True</code> / <code>False</code></td><td><code>True</code>＝使用者模式下隱藏（工程模式可見）</td></tr>
+  <tr><td><code>Key_setbit</code></td><td><code>True</code> / <code>False</code></td><td><code>True</code>＝使用 SetBit 視窗（位元勾選器）取代數字輸入</td></tr>
+  <tr><td><code>Key_production</code></td><td><code>True</code> / <code>False</code></td><td><code>True</code>＝生產模式下才寫入（一般流程跳過）</td></tr>
+</table>
+
+<div class="box box-info">
+  <div class="box-label">ℹ Key_address 特別說明</div>
+  <ul>
+    <li>位址範圍 <code>0x0000</code>–<code>0x0020</code> 被視為系統保留（SIG、SN），寫入流程自動跳過。</li>
+    <li>位址 <code>0x0090</code>–<code>0x0092</code>（Fault Story、Warning Story 等）在頁籤 <code>00</code>（SIG Para）顯示，工程模式才可見。</li>
+    <li>位址需為有效的 16-bit 無號整數（<code>0000</code>–<code>FFFF</code>），建議統一大寫。</li>
+  </ul>
+</div>
+
+<h2 id="s3-3">完整範例</h2>
+<pre>[Section15]
+Key_name=Rs
+Key_address=0101
+Key_unit=mohm
+Key_upperbound=65535
+Key_lowerbound=0
+Key_tooltip=
+Key_writeable=True
+Key_hidden=False
+Key_setbit=False
+Key_production=False
+
+[Section31]
+Key_name=Setting Parameter
+Key_address=0200
+Key_unit=digit
+Key_upperbound=65535
+Key_lowerbound=0
+Key_tooltip=bit0 : console debug info                 0:disable 1:enable\nbit1 : speed limit from               0:driver  1:console
+Key_writeable=True
+Key_hidden=True
+Key_setbit=True
+Key_production=False</pre>
+
+<!-- S4 -->
+<h1 id="s4">兩者隱式對應規則（Address Prefix Mapping）</h1>
+
+<h2 id="s4-1">對應規則說明</h2>
+<p>頁籤與參數的歸屬關係以下列規則決定：</p>
+<div class="box">
+  <strong>規則：</strong>將參數位址格式化為 4 位大寫十六進位字串，若其<strong>前兩碼</strong>與某頁籤的 <code>Key_pagenum</code> 相同，則該參數屬於該頁籤。
+</div>
+<p>等效判斷式（JavaScript）：</p>
+<pre>addrHex.startsWith(tab.pageNum.toUpperCase())</pre>
+<p>其中 <code>addrHex</code> 為 <code>item.address.toString(16).toUpperCase().padStart(4, '0')</code>。</p>
+
+<h2 id="s4-2">現有頁籤位址範圍對照</h2>
+<table>
+  <tr><th>pageNum</th><th>頁籤名稱</th><th>位址範圍（十六進位）</th><th>範圍（十進位）</th><th>典型參數</th></tr>
+  <tr>
+    <td><code>00</code></td><td>SIG Para</td>
+    <td><span class="addr-band">0x0000–0x00FF</span></td><td>0–255</td>
+    <td>SIG0–SIG3、SN0–SN7、Fault Story、Warning Story</td>
+  </tr>
+  <tr>
+    <td><code>01</code></td><td>Motor Para</td>
+    <td><span class="addr-band">0x0100–0x01FF</span></td><td>256–511</td>
+    <td>Rs、Ls、Poles、Max Voltage、Spd sensor cnts</td>
+  </tr>
+  <tr>
+    <td><code>02</code></td><td>Bike Para</td>
+    <td><span class="addr-band">0x0200–0x02FF</span></td><td>512–767</td>
+    <td>Wheel Circumference、Speed Limit、Push Assist、Hardware Parameter</td>
+  </tr>
+  <tr>
+    <td><code>03</code></td><td>Assist Para</td>
+    <td><span class="addr-band">0x0300–0x03FF</span></td><td>768–1023</td>
+    <td>Torque/Power/Speed Level 1–9、Max Current、Power Reduction</td>
+  </tr>
+  <tr>
+    <td><code>04</code></td><td>Pedal Sensor</td>
+    <td><span class="addr-band">0x0400–0x04FF</span></td><td>1024–1279</td>
+    <td>Sensor Type、cnts per round、Torque mv to nm ratio</td>
+  </tr>
+  <tr>
+    <td><code>05</code></td><td>Throttle Para</td>
+    <td><span class="addr-band">0x0500–0x05FF</span></td><td>1280–1535</td>
+    <td>Throttle Enable、Throttle Max Power、zero/max voltage</td>
+  </tr>
+</table>
+<div class="box box-tip">
+  <div class="box-label">💡 位址命名慣例</div>
+  目前的參數位址採用 <strong>頁碼 × 0x100 + 偏移</strong> 的隱性規則。例如 Motor Para（頁碼 01）的所有參數位址落在 <code>0x01xx</code>，偏移由功能群組決定（如馬達阻抗 <code>01xx</code>、保護電流 <code>011x</code>、車速 <code>012x</code>）。
+</div>
+
+<h2 id="s4-3">程式碼對應邏輯</h2>
+<p>實作位於 <a href="js/ui.js">js/ui.js</a> 的 <code>generateTabs()</code> 函式：</p>
+<pre>// 取出屬於此頁籤的所有 HRItem
+const items = state.hrList
+  .map(function(item, idx) { return { item: item, idx: idx }; })
+  .filter(function(o) {
+    const addrHex = o.item.address.toString(16).toUpperCase().padStart(4, '0');
+    return addrHex.startsWith(tab.pageNum.toUpperCase());  // ← 前兩碼比對
+  });</pre>
+<p>過濾結果再依 <code>engineeringMode</code> 決定是否顯示 <code>hidden=True</code> 的參數。</p>
+
+<!-- S5 -->
+<h1 id="s5">整體資料流</h1>
+<div class="flow">page.ini                           parameter.ini
+    │                                      │
+    ▼ parsePageIni()                        ▼ parseParameterIni()
+state.tabList[]                        state.hrList[]
+[ { pageName, pageNum }, … ]           [ HRItem{ name, address, data, … }, … ]
+    │                                      │
+    └──────────────┬───────────────────────┘
+                   │
+                   ▼  generateTabs()  [ui.js]
+         對每個 tab，過濾 hrList：
+         address 前兩碼 === tab.pageNum
+                   │
+         ┌─────────┴──────────┐
+         ▼                    ▼
+     Tab Panel 0          Tab Panel 1  …
+     (SIG Para)           (Motor Para)
+     過濾出 addr 00xx     過濾出 addr 01xx
+         │
+         ▼  buildParamRow()
+     每列：名稱 ｜ 輸入框 ｜ 單位 ｜ Hex checkbox
+                   │
+    ┌──────────────┴──────────────┐
+    │ 讀取裝置                   │ 匯入 Config
+    ▼                             ▼
+ hrList[i].data = 裝置值      paraList[{ address, data }]
+                               (用於差異比對與比較顯示)
+</div>
+
+<!-- S6 -->
+<h1 id="s6">新增頁籤或參數的操作說明</h1>
+
+<h2 id="s6-1">新增頁籤</h2>
+<p>只需在 <code>page.ini</code> 末尾加入新 Section：</p>
+<pre>[Section6]
+Key_pagename = Battery Para
+Key_pagenum= 06</pre>
+<p>接著在 <code>parameter.ini</code> 加入位址落在 <code>0x06xx</code> 範圍的參數，重新載入即可看到新頁籤。</p>
+<div class="box box-warn">
+  <div class="box-label">⚠ Section 編號連續性</div>
+  新頁籤的 Section 編號必須接在現有最大編號後一位，不可跳號。例如現有 Section0–Section5，下一個必須是 <code>[Section6]</code>。
+</div>
+
+<h2 id="s6-2">新增參數</h2>
+<p>在 <code>parameter.ini</code> 末尾加入新 Section，確認：</p>
+<ol>
+  <li><strong>位址前兩碼</strong>對應到想顯示的頁籤 pageNum。</li>
+  <li><strong>Section 編號</strong>接在現有最大編號後一位（不跳號）。</li>
+  <li><strong>位址不重複</strong>（重複位址不會報錯，但同位址兩個參數都會顯示，讀寫會發生覆蓋）。</li>
+</ol>
+<pre>[Section99]
+Key_name=Battery Voltage
+Key_address=0600
+Key_unit=0.1V
+Key_upperbound=580
+Key_lowerbound=0
+Key_tooltip=Battery pack total voltage
+Key_writeable=False
+Key_hidden=False
+Key_setbit=False
+Key_production=False</pre>
+
+<h2 id="s6-3">常見錯誤與注意事項</h2>
+<table>
+  <tr><th>情況</th><th>後果</th><th>解決方式</th></tr>
+  <tr><td>位址前兩碼無對應 pageNum</td><td>參數不出現在任何頁籤（靜默忽略）</td><td>確認位址前兩碼，或在 page.ini 補充對應頁籤</td></tr>
+  <tr><td>Section 編號跳號</td><td>解析器在缺號處停止，後面的 Section 全部遺失</td><td>確保編號連續從 0 起</td></tr>
+  <tr><td>位址重複</td><td>兩個參數都顯示，寫入時後者覆蓋前者</td><td>搜尋 parameter.ini 確認無重複 Key_address</td></tr>
+  <tr><td><code>Key_setbit=True</code> 但 tooltip 格式錯誤</td><td>SetBit 視窗顯示無說明的 bit0–bit15</td><td>確認 tooltip 格式為 <code>bitN 說明\nbitM 說明</code></td></tr>
+  <tr><td>Upper/Lower Bound 設定反向</td><td>所有輸入值均顯示超範圍紅底</td><td>確認 upperbound &gt; lowerbound</td></tr>
+  <tr><td>Key_address 少於 4 位且帶前導零</td><td>前兩碼比對失效，歸類錯誤頁籤</td><td>位址統一補齊 4 位（如 <code>0101</code> 而非 <code>101</code>）</td></tr>
+</table>
+
+<!-- S7 -->
+<h1 id="s7">HRItem 資料結構（程式端）</h1>
+<p><code>parameter.ini</code> 每個 Section 解析後在 JavaScript 中形成一個 <strong>HRItem</strong> 物件，定義於 <a href="js/ini.js">js/ini.js</a>：</p>
+<table>
+  <tr><th>屬性</th><th>來源欄位</th><th>型別</th><th>說明</th></tr>
+  <tr><td><code>name</code></td><td>Key_name</td><td>string</td><td>顯示名稱</td></tr>
+  <tr><td><code>address</code></td><td>Key_address</td><td>number（uint16）</td><td>16 進位解析後的整數位址</td></tr>
+  <tr><td><code>data</code></td><td>—（runtime）</td><td>number</td><td>執行期數值，初始為 0；由讀取或匯入 Config 更新</td></tr>
+  <tr><td><code>unit</code></td><td>Key_unit</td><td>string</td><td>單位標籤</td></tr>
+  <tr><td><code>upperBound</code></td><td>Key_upperbound</td><td>number</td><td>輸入上限（integer）</td></tr>
+  <tr><td><code>lowerBound</code></td><td>Key_lowerbound</td><td>number</td><td>輸入下限（integer）</td></tr>
+  <tr><td><code>tooltip</code></td><td>Key_tooltip</td><td>string</td><td>滑鼠懸停說明，<code>\n</code> 顯示為換行</td></tr>
+  <tr><td><code>writeable</code></td><td>Key_writeable</td><td>boolean</td><td>是否渲染為可輸入欄位</td></tr>
+  <tr><td><code>hidden</code></td><td>Key_hidden</td><td>boolean</td><td>使用者模式是否隱藏</td></tr>
+  <tr><td><code>setBit</code></td><td>Key_setbit</td><td>boolean</td><td>使用 SetBit 視窗輸入</td></tr>
+  <tr><td><code>production</code></td><td>Key_production</td><td>boolean</td><td>僅生產模式寫入</td></tr>
+  <tr><td><code>nameEl</code></td><td>—（ui.js）</td><td>HTMLElement</td><td>名稱欄 DOM 參考（<code>generateTabs</code> 後填入）</td></tr>
+  <tr><td><code>valueEl</code></td><td>—（ui.js）</td><td>HTMLElement</td><td>數值欄 DOM 參考</td></tr>
+  <tr><td><code>unitEl</code></td><td>—（ui.js）</td><td>HTMLElement</td><td>單位欄 DOM 參考</td></tr>
+  <tr><td><code>hexChkEl</code></td><td>—（ui.js）</td><td>HTMLInputElement</td><td>十六進位核取方塊 DOM 參考</td></tr>
+</table>
+<p>序列化回 INI 格式時（<code>serializeParameterIni()</code>），<code>data</code> 與四個 DOM 參考不會寫入，僅寫入定義欄位。</p>
+
+<!-- S8 -->
+<h1 id="s8">INI 快取機制</h1>
+<p>工具啟動時依下列優先順序載入 INI：</p>
+<ol>
+  <li>從伺服器 <strong>fetch</strong> <code>page.ini</code> 與 <code>parameter.ini</code>（同目錄）。</li>
+  <li>成功 → 解析後存入 <code>localStorage</code>，鍵名：
+    <ul>
+      <li><code>endex_page_ini</code>（頁籤定義原始文字）</li>
+      <li><code>endex_parameter_ini</code>（參數定義原始文字）</li>
+    </ul>
+  </li>
+  <li>fetch 失敗 → 從 <code>localStorage</code> 讀取舊快取；若無快取則顯示「請手動選擇 INI 檔案」。</li>
+</ol>
+<table>
+  <tr><th>操作</th><th>說明</th></tr>
+  <tr><td>↻ 重新載入</td><td>強制 fetch 最新版本並更新快取，適合修改 INI 後立即套用</td></tr>
+  <tr><td>✕ 清除快取</td><td>刪除 localStorage 中的兩個鍵，下次開啟時重新 fetch</td></tr>
+  <tr><td>手動選擇 INI</td><td>從本機選擇檔案，解析後寫入 localStorage（覆蓋快取）</td></tr>
+  <tr><td>Config 編輯器「確定 &amp; 儲存」</td><td>將修改後的 HRItem 序列化，更新快取並下載新 parameter.ini</td></tr>
+</table>
+<div class="box box-tip">
+  <div class="box-label">💡 修改 INI 後的建議流程</div>
+  <ol>
+    <li>將新版 INI 檔案放回工具同目錄（取代舊檔）。</li>
+    <li>在工具側邊欄點擊「↻ 重新載入」，即可套用新定義。</li>
+    <li>無伺服器環境（直接開啟 HTML）：使用「手動選擇 INI」從本機選取新版檔案。</li>
+  </ol>
+</div>
+
+<div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
+  Endex eBike Tool &nbsp;｜&nbsp; 附件：INI 設定檔規格說明 &nbsp;｜&nbsp; 2026-06-05
+</div>
+
+</div>
+</body>
+</html>

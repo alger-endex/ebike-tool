@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.2.0</title>
+<title>Endex eBike Tool — 操作說明書 v1.2.1</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -91,8 +91,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.2.0</div>
-  <div class="cover-date">2026-06-02</div>
+  <div class="cover-ver">操作說明書 v1.2.1</div>
+  <div class="cover-date">2026-06-05</div>
 </div>
 
 <!-- TOC -->
@@ -120,7 +120,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
     <li><a href="#s12">韌體更新（Burn）</a>
       <ol class="sub">
         <li><a href="#s12-1">載入 HEX 檔</a></li>
-        <li><a href="#s12-2">確認 Firmware 狀態</a></li>
+        <li><a href="#s12-2">讀取 DRV FW &amp; 狀態</a></li>
         <li><a href="#s12-3">執行燒錄</a></li>
         <li><a href="#s12-4">停止燒錄</a></li>
         <li><a href="#s12-5">UART / CAN 燒錄差異</a></li>
@@ -163,6 +163,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 </table>
 
 <h2 id="s2-2">側邊欄各區塊</h2>
+<p>側邊欄寬度可透過拖曳右側邊界調整（範圍 140–480 px），設定自動記憶於 <code>localStorage</code>，下次開啟時還原。</p>
 
 <h3>① 設定檔</h3>
 <table>
@@ -176,11 +177,19 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <h3>② 資料操作</h3>
 <table>
   <tr><th>元件</th><th>功能</th></tr>
-  <tr><td>顯示比較參數 ☑</td><td>勾選後匯入的 Config 存為第二組 (import2)，用於差異比對</td></tr>
-  <tr><td>匯入 Config</td><td>從本機選擇 CONFIG.txt 載入至目前資料組</td></tr>
-  <tr><td>匯出 Config</td><td>將目前所有參數值匯出為 CONFIG.txt 並下載</td></tr>
+  <tr><td>顯示比較參數 ☑</td><td>切換主動資料組：未勾選＝主組（hrList），勾選＝副組（paraList）。匯入、匯出、寫入均作用於目前資料組。</td></tr>
+  <tr><td>匯入 Config</td><td>從本機選擇 CONFIG.txt 載入至目前資料組（主或副）</td></tr>
+  <tr><td>匯出 Config</td><td>將目前資料組所有參數值匯出為 CONFIG.txt 並下載</td></tr>
   <tr><td>⇄ 比對差異</td><td>開啟差異比對視窗（需至少兩組資料）</td></tr>
 </table>
+<h3>顯示比較參數（showPara）色彩說明</h3>
+<p>勾選「顯示比較參數」後，主要區域各參數數值以顏色區分來源：</p>
+<table>
+  <tr><th>顏色</th><th>標示</th><th>意義</th></tr>
+  <tr><td style="color:#2563eb;font-weight:700">■ 藍色</td><td>有勾 副</td><td>數值來自 paraList（副組），為比較用資料</td></tr>
+  <tr><td style="color:#64748b;font-weight:700">■ 灰色</td><td>無勾 主</td><td>paraList 無此位址，fallback 顯示 hrList（主組）數值</td></tr>
+</table>
+<p>側邊欄常駐圖例另顯示兩組資料目前的更新來源（<code>—</code> 表示尚未載入、<code>匯入 Config</code>、<code>讀取參數</code>）。</p>
 
 <h3>③ 裝置</h3>
 <table>
@@ -195,7 +204,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
   <tr><th>元件</th><th>功能</th></tr>
   <tr><td>📂 載入 HEX 檔</td><td>選擇韌體 HEX 檔案，解析 SIG 與版本號</td></tr>
   <tr><td>檔名 / 版本資訊</td><td>顯示已載入檔名、新版本號、行數、位元組數</td></tr>
-  <tr><td>🔍 確認 Firmware 狀態</td><td>查詢裝置目前執行模式，不執行燒錄</td></tr>
+  <tr><td>🔍 讀取 DRV FW &amp; 狀態</td><td>查詢裝置目前執行模式與韌體版本，不執行燒錄</td></tr>
   <tr><td>⚡ 開始燒錄</td><td>執行完整燒錄流程；進行中顯示「⏹ 停止燒錄」</td></tr>
   <tr><td>進度條</td><td>顯示燒錄進度百分比與已傳/總量</td></tr>
 </table>
@@ -457,8 +466,8 @@ Key_production=False</pre>
   工具讀取所有行，遇 <code>@$</code> 開頭行則截止（含該行）。UART 燒錄只處理 <code>:</code> 或 <code>@</code> 開頭的行；CAN 燒錄傳送整個檔案文字。
 </div>
 
-<h2 id="s12-2">確認 Firmware 狀態</h2>
-<p>點擊「<strong>🔍 確認 Firmware 狀態</strong>」，向裝置查詢目前執行模式（無燒錄動作）。</p>
+<h2 id="s12-2">讀取 DRV FW &amp; 狀態</h2>
+<p>點擊「<strong>🔍 讀取 DRV FW &amp; 狀態</strong>」，向裝置查詢目前執行模式與韌體版本（無燒錄動作）。</p>
 <table>
   <tr><th>狀態記錄顯示</th><th>說明</th></tr>
   <tr><td>✅ Bootloader（可燒錄）</td><td>裝置在 Bootloader 模式，可直接執行燒錄</td></tr>
@@ -580,7 +589,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.2.0 &nbsp;｜&nbsp; 2026-06-02
+  Endex eBike Tool 操作說明書 v1.2.1 &nbsp;｜&nbsp; 2026-06-05
 </div>
 
 </div>
