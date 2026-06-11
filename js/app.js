@@ -1480,10 +1480,24 @@ async function burnFlashUart(sig) {
 // ── BLE-CAN flash ────────────────────────────────────────
 
 async function burnFlashBleCan(sig) {
-  let totalBytes = burnState.lines.reduce((s, l) => s + l.length, 0);
+  const CHUNK_SIZE = parseInt(document.getElementById('selBleChunk').value, 10) || 62;
+
+  // Build flat byte stream: each filtered line followed by \r\n
+  const enc = new TextEncoder();
+  const parts = [];
+  for (const line of burnState.lines) {
+    if (line === '') break;
+    const fc = line.charCodeAt(0);
+    if (fc !== 0x40 /* @ */ && fc !== 0x3A /* : */) continue;
+    for (const b of enc.encode(line)) parts.push(b);
+    parts.push(0x0D, 0x0A);
+  }
+  const allBytes = new Uint8Array(parts);
+  const totalBytes = allBytes.length;
+
   let doRetry = false;
   const flashT0 = Date.now();
-  let lineCount = 0;
+  let chunkCount = 0;
   let totalRttMs = 0;
 
   do {
@@ -1491,26 +1505,23 @@ async function burnFlashBleCan(sig) {
     doRetry = false;
     let sentBytes = 0;
     setBurnProgress(0, 'BLE-CAN Programming...');
-    log('BLE-CAN Programming...');
+    log('BLE-CAN Programming...  ' + totalBytes + ' bytes  chunk=' + CHUNK_SIZE);
 
-    for (const line of burnState.lines) {
-      if (line === '') break;
-      const fc = line.charCodeAt(0);
-      if (fc !== 0x40 /* @ */ && fc !== 0x3A /* : */) continue;
-
-      const lineBytes = new TextEncoder().encode(line);
-      let lineRetry = false;
-      let lineRetryCnt = 0;
+    for (let i = 0; i < allBytes.length; i += CHUNK_SIZE) {
+      const chunk = allBytes.slice(i, i + CHUNK_SIZE);
+      const pkt = buildBurnBleCanChunk(chunk);
+      let chunkRetry = false;
+      let chunkRetryCnt = 0;
 
       do {
-        if (lineRetry) await sleep(300);
-        lineRetry = false;
+        if (chunkRetry) await sleep(300);
+        chunkRetry = false;
 
         state.serial.clearBuffer();
-        const tLine = Date.now();
-        await state.serial.write(buildBurnBleCanLine(lineBytes));
+        const tChunk = Date.now();
+        await state.serial.write(pkt);
         const ack = await state.serial.readBurnBleCanLineAck(1000);
-        const rtt = Date.now() - tLine;
+        const rtt = Date.now() - tChunk;
         const result = parseBurnBleCanLineAck(ack);
 
         if (result === 'timeout') {
@@ -1518,18 +1529,18 @@ async function burnFlashBleCan(sig) {
           doRetry = true;
           break;
         } else if (result === 'nak') {
-          if (lineRetryCnt >= 10) { log('Still fail after retry 10 times, aborted.'); return false; }
-          log('Line error, retry...');
-          lineRetry = true;
+          if (chunkRetryCnt >= 3) { log('Still fail after retry 3 times, aborted.'); return false; }
+          log('Chunk error, retry...');
+          chunkRetry = true;
         } else {
-          lineCount++;
+          chunkCount++;
           totalRttMs += rtt;
-          sentBytes += lineBytes.length;
-          const pct = totalBytes > 0 ? Math.round(sentBytes * 100 / totalBytes) : 0;
+          sentBytes += chunk.length;
+          const pct = Math.round(sentBytes * 100 / totalBytes);
           setBurnProgress(pct, pct + '% (' + sentBytes + '/' + totalBytes + ')');
         }
-        lineRetryCnt++;
-      } while (lineRetry);
+        chunkRetryCnt++;
+      } while (chunkRetry);
 
       if (doRetry) break;
       if (burnState.cancelRequested) { log('⏹ 燒錄已終止'); return false; }
@@ -1537,8 +1548,8 @@ async function burnFlashBleCan(sig) {
   } while (doRetry);
 
   const flashMs = Date.now() - flashT0;
-  const avgRtt  = lineCount > 0 ? Math.round(totalRttMs / lineCount) : 0;
-  log('BLE-CAN Program done!  Flash: ' + (flashMs / 1000).toFixed(1) + 's  行數: ' + lineCount + '  avg RTT: ' + avgRtt + 'ms/行');
+  const avgRtt = chunkCount > 0 ? Math.round(totalRttMs / chunkCount) : 0;
+  log('BLE-CAN Program done!  Flash: ' + (flashMs / 1000).toFixed(1) + 's  chunks: ' + chunkCount + '  avg RTT: ' + avgRtt + 'ms/chunk');
   return true;
 }
 
@@ -1734,6 +1745,18 @@ initConfigModal();
 
 // Show version
 document.getElementById('appVersion').textContent = APP_VERSION;
+
+// ── BLE chunk row visibility ──────────────────────────────────────
+function applyBurnModeSelection(mode) {
+  const row = document.getElementById('bleChunkRow');
+  if (row) row.style.display = mode === 'blecan' ? '' : 'none';
+}
+
+document.getElementById('selBurnMode').addEventListener('change', (e) => {
+  applyBurnModeSelection(e.target.value);
+});
+
+applyBurnModeSelection(document.getElementById('selBurnMode').value);
 
 // ── Channel selector ──────────────────────────────────────────────
 function applyChannelSelection(channel) {

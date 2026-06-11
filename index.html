@@ -119,6 +119,19 @@
           <option value="blecan">BLE-CAN</option>
         </select>
       </div>
+      <div class="field-row" id="bleChunkRow" style="display:none">
+        <span class="field-lbl">封包</span>
+        <select id="selBleChunk">
+          <option value="56">56 bytes</option>
+          <option value="62" selected>62 bytes</option>
+          <option value="124">124 bytes</option>
+          <option value="180">180 bytes</option>
+          <option value="186">186 bytes</option>
+          <option value="242">242 bytes</option>
+          <option value="248">248 bytes</option>
+          <option value="255">255 bytes</option>
+        </select>
+      </div>
       <button id="btnBurn" class="btn btn-block btn-burn" disabled>⚡ 開始燒錄</button>
       <div class="burn-progress-wrap">
         <div id="burnProgressBar" class="burn-progress-fill"></div>

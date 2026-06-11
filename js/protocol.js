@@ -319,15 +319,14 @@ function buildBurnCanSegments(chunk) {
 // ── BLE-CAN burn packets ───────────────────────────────────────
 
 /**
- * Build BLE-CAN firmware line packet (no CRC).
- * [0xF1, len, lineBytes..., 0x0D, 0x0A]
+ * Build BLE-CAN firmware chunk packet (no CRC).
+ * chunkBytes already contains embedded \r\n line terminators.
+ * [0xF1, len, chunkBytes...]
  */
-function buildBurnBleCanLine(lineBytes) {
-  const p = new Uint8Array(lineBytes.length + 4);
-  p[0] = 0xF1; p[1] = lineBytes.length + 2;
-  for (let i = 0; i < lineBytes.length; i++) p[2 + i] = lineBytes[i];
-  p[2 + lineBytes.length] = 0x0D;
-  p[3 + lineBytes.length] = 0x0A;
+function buildBurnBleCanChunk(chunkBytes) {
+  const p = new Uint8Array(chunkBytes.length + 2);
+  p[0] = 0xF1; p[1] = chunkBytes.length;
+  p.set(chunkBytes, 2);
   return p;
 }
 
