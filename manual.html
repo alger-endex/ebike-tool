@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.2.1</title>
+<title>Endex eBike Tool — 操作說明書 v1.3.0</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -80,6 +80,26 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 .badge{display:inline-block;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:600;vertical-align:middle}
 .badge-uart{background:#dbeafe;color:#1e40af}
 .badge-can{background:#dcfce7;color:#166534}
+.badge-blecan{background:#f3e8ff;color:#6b21a8}
+
+/* Native browser device-picker dialog mockup (serial port / BLE pairing) */
+.dev-mock{max-width:380px;border:1px solid #444;border-radius:8px;overflow:hidden;margin:14px 0;font-family:'Segoe UI',sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.dev-mock-title{background:#f3f3f3;color:#3a3a3a;font-size:12px;padding:8px 14px;border-bottom:1px solid #ddd}
+.dev-mock-body{background:#262626;color:#e8e8e8;padding:14px 18px}
+.dev-mock-list{position:relative;border-radius:6px;overflow:hidden}
+.dev-mock-item{padding:9px 14px;font-size:13px;background:#333;border-bottom:1px solid #3a3a3a}
+.dev-mock-item:last-child{border-bottom:none}
+.dev-mock-item.selected{outline:1.5px solid #3b82f6;outline-offset:-1px;background:#383838}
+.dev-mock-icon{color:#9ca3af;margin-right:8px}
+.dev-mock-list.scroll .dev-mock-item{padding-right:24px}
+.dev-mock-list.scroll::before{content:'';position:absolute;top:4px;right:5px;bottom:4px;width:4px;border-radius:2px;background:#454545}
+.dev-mock-list.scroll::after{content:'';position:absolute;top:4px;right:5px;width:4px;height:38%;border-radius:2px;background:#6b6b6b}
+.dev-mock-footer{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:12px}
+.dev-mock-help{width:18px;height:18px;border:1px solid #777;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#aaa;flex-shrink:0}
+.dev-mock-hint{color:#93c5fd;flex:1}
+.dev-mock-btn{color:#60a5fa;font-weight:600;padding:4px 6px}
+.dev-mock-btn:first-of-type{margin-left:auto}
+.dev-mock-btn-dim{color:#999}
 
 @media print{.toc{page-break-after:always}h1{page-break-before:always}}
 </style>
@@ -91,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.2.1</div>
-  <div class="cover-date">2026-06-05</div>
+  <div class="cover-ver">操作說明書 v1.3.0</div>
+  <div class="cover-date">2026-06-12</div>
 </div>
 
 <!-- TOC -->
@@ -108,7 +128,12 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
         <li><a href="#s2-4">底部狀態列</a></li>
       </ol>
     </li>
-    <li><a href="#s3">序列埠連線</a></li>
+    <li><a href="#s3">序列埠連線</a>
+      <ol class="sub">
+        <li><a href="#s3-1">USB 序列埠連線</a></li>
+        <li><a href="#s3-2">BLE 連線</a></li>
+      </ol>
+    </li>
     <li><a href="#s4">設定檔載入（INI）</a></li>
     <li><a href="#s5">讀取裝置參數</a></li>
     <li><a href="#s6">寫入裝置參數</a></li>
@@ -120,10 +145,11 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
     <li><a href="#s12">韌體更新（Burn）</a>
       <ol class="sub">
         <li><a href="#s12-1">載入 HEX 檔</a></li>
-        <li><a href="#s12-2">讀取 DRV FW &amp; 狀態</a></li>
-        <li><a href="#s12-3">執行燒錄</a></li>
-        <li><a href="#s12-4">停止燒錄</a></li>
-        <li><a href="#s12-5">UART / CAN 燒錄差異</a></li>
+        <li><a href="#s12-2">選擇燒錄方式（標準 / BLE-CAN）</a></li>
+        <li><a href="#s12-3">讀取 DRV FW &amp; 狀態</a></li>
+        <li><a href="#s12-4">執行燒錄</a></li>
+        <li><a href="#s12-5">停止燒錄</a></li>
+        <li><a href="#s12-6">UART / CAN 燒錄差異</a></li>
       </ol>
     </li>
     <li><a href="#s13">工程模式 / 使用者模式 / 生產模式</a></li>
@@ -153,7 +179,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <h2 id="s2-1">頂部列</h2>
 <table>
   <tr><th>元件</th><th>說明</th></tr>
-  <tr><td>開啟序列埠</td><td>彈出瀏覽器 COM Port 選擇視窗，選擇介面卡後確認連線</td></tr>
+  <tr><td>Channel</td><td>選擇連線通道：<code>Comport</code>（USB 序列埠，預設）或 <code>BLE</code></td></tr>
+  <tr><td>開啟連線</td><td>依 Channel 選擇彈出瀏覽器 COM Port 選擇視窗或 BLE 裝置配對視窗，確認後建立連線</td></tr>
   <tr><td>● 狀態燈</td><td>灰色＝未連線　綠色＝已連線</td></tr>
   <tr><td>Protocol</td><td>選擇通訊協議：<code>UART</code> 或 <code>CAN</code>（預設 CAN）</td></tr>
   <tr><td>Baud</td><td>鮑率選擇（UART 預設 9600；CAN 自動升至 460800）</td></tr>
@@ -244,11 +271,31 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 
 <!-- S3 -->
 <h1 id="s3">序列埠連線</h1>
+
+<h2 id="s3-1">USB 序列埠連線</h2>
 <div class="steps">
   <div class="step"><div class="step-num">1</div><div class="step-body">確認 USB‑Serial 介面卡已插入電腦，驅動程式已安裝，裝置管理員中可看到對應 COM Port。</div></div>
-  <div class="step"><div class="step-num">2</div><div class="step-body">頂部列選擇 <strong>Protocol</strong>：<code>UART</code> 或 <code>CAN</code>。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">頂部列 <strong>Channel</strong> 選擇 <code>Comport</code>（預設），<strong>Protocol</strong> 選擇 <code>UART</code> 或 <code>CAN</code>。</div></div>
   <div class="step"><div class="step-num">3</div><div class="step-body">（選填）調整 Baud、Data、Stop、Parity。CAN 模式若設為 9600 系統自動升至 460800。</div></div>
-  <div class="step"><div class="step-num">4</div><div class="step-body">點擊「<strong>開啟序列埠</strong>」，瀏覽器彈出選擇視窗，選取對應介面卡後確定。</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">點擊「<strong>開啟連線</strong>」，瀏覽器彈出 COM Port 選擇視窗，選取對應介面卡後點擊「<strong>連線</strong>」：</div></div>
+</div>
+<div class="dev-mock">
+  <div class="dev-mock-title">file:/// 想要連線到序列埠</div>
+  <div class="dev-mock-body">
+    <div class="dev-mock-list scroll">
+      <div class="dev-mock-item">VerveBuds 300</div>
+      <div class="dev-mock-item">serial port (COM10)</div>
+      <div class="dev-mock-item">USB JTAG/serial debug unit (COM11)</div>
+      <div class="dev-mock-item selected">STM32 Virtual ComPort (COM3)</div>
+    </div>
+    <div class="dev-mock-footer">
+      <span class="dev-mock-btn">連線</span>
+      <span class="dev-mock-btn dev-mock-btn-dim">取消</span>
+    </div>
+  </div>
+</div>
+<p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:-6px">▲ USB 序列埠選擇視窗示意</p>
+<div class="steps">
   <div class="step"><div class="step-num">5</div><div class="step-body">狀態燈變綠，狀態記錄顯示 <code>serialPort open success</code>（UART）或 <code>Set comport to Tool_R OK!</code>（CAN）。</div></div>
 </div>
 <div class="box box-warn">
@@ -262,6 +309,36 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="box box-info">
   <div class="box-label">ℹ SIG 協議比對</div>
   連線後工具自動檢查 SIG 末字元奇偶，判斷應使用 UART 或 CAN；若與目前選擇不符會在狀態記錄提示。
+</div>
+
+<h2 id="s3-2">BLE 連線</h2>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body">頂部列 <strong>Channel</strong> 選擇 <code>BLE</code>，Baud / Data / Stop / Parity 等序列埠專用設定會自動隱藏。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>開啟連線</strong>」，瀏覽器彈出 BLE 裝置選擇視窗，只會列出名稱為 <code>ESP_GATTS_DEMO</code> 的裝置（即 ESP32 BLE 橋接器）。</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">選取裝置後，系統可能跳出配對確認視窗，點擊「<strong>配對</strong>」完成配對：</div></div>
+</div>
+<div class="dev-mock">
+  <div class="dev-mock-title">file:/// 想要配對</div>
+  <div class="dev-mock-body">
+    <div class="dev-mock-list">
+      <div class="dev-mock-item selected"><span class="dev-mock-icon">▶</span>ESP_GATTS_DEMO</div>
+    </div>
+    <div class="dev-mock-footer">
+      <span class="dev-mock-help">?</span>
+      <span class="dev-mock-hint">正在掃描...</span>
+      <span class="dev-mock-btn">配對</span>
+      <span class="dev-mock-btn dev-mock-btn-dim">取消</span>
+    </div>
+  </div>
+</div>
+<p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:-6px">▲ BLE 裝置配對視窗示意</p>
+<div class="steps">
+  <div class="step"><div class="step-num">4</div><div class="step-body">配對完成後，工具自動偵測支援的 BLE UART Service/Characteristic（依序嘗試 ESP_GATTS → NUS → HM10 → SPP）。</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body">狀態燈變綠，頂部列顯示已連線的 BLE 裝置資訊。</div></div>
+</div>
+<div class="box box-info">
+  <div class="box-label">ℹ 找不到裝置</div>
+  確認 ESP32 BLE 橋接器已開機並正在廣播名稱 <code>ESP_GATTS_DEMO</code>；BLE 連線僅支援 Chrome / Edge（需具備 Web Bluetooth API）。
 </div>
 
 <!-- S4 -->
@@ -466,7 +543,25 @@ Key_production=False</pre>
   工具讀取所有行，遇 <code>@$</code> 開頭行則截止（含該行）。UART 燒錄只處理 <code>:</code> 或 <code>@</code> 開頭的行；CAN 燒錄傳送整個檔案文字。
 </div>
 
-<h2 id="s12-2">讀取 DRV FW &amp; 狀態</h2>
+<h2 id="s12-2">選擇燒錄方式（標準 / BLE-CAN）</h2>
+<p>「韌體更新」區塊的「<strong>方式</strong>」下拉選單可選擇燒錄傳輸方式：</p>
+<table>
+  <tr><th>選項</th><th>說明</th></tr>
+  <tr><td>標準（預設）</td><td>依目前連線協議，以 UART 逐行或 CAN 逐段方式燒錄。</td></tr>
+  <tr><td><span class="badge badge-blecan">BLE-CAN</span></td><td>透過 BLE 橋接器（ESP32 ble_bridge）以「分塊」方式傳送韌體資料，每塊封裝為 <code>[0xF1, len, 資料]</code>，傳送後等待裝置 ACK 才送下一塊。</td></tr>
+</table>
+<p>選擇「<strong>BLE-CAN</strong>」後，會顯示「<strong>封包</strong>」下拉選單，可設定每個分塊的大小：</p>
+<table>
+  <tr><th>封包大小</th><th>說明</th></tr>
+  <tr><td>124 bytes（預設）</td><td>較保守，BLE 連線品質不穩時建議使用。</td></tr>
+  <tr><td>248 bytes</td><td>分塊數較少、燒錄較快，但需 BLE 連線穩定。</td></tr>
+</table>
+<div class="box box-tip">
+  <div class="box-label">💡 使用建議</div>
+  若燒錄過程中持續出現逾時或重試，可改選 124 bytes 後重新燒錄。
+</div>
+
+<h2 id="s12-3">讀取 DRV FW &amp; 狀態</h2>
 <p>點擊「<strong>🔍 讀取 DRV FW &amp; 狀態</strong>」，向裝置查詢目前執行模式與韌體版本（無燒錄動作）。</p>
 <table>
   <tr><th>狀態記錄顯示</th><th>說明</th></tr>
@@ -475,7 +570,7 @@ Key_production=False</pre>
   <tr><td>❌ 無回應 / SIG 不符</td><td>逾時或 SIG 識別碼不匹配，需確認協議與連線</td></tr>
 </table>
 
-<h2 id="s12-3">執行燒錄</h2>
+<h2 id="s12-4">執行燒錄</h2>
 <div class="steps">
   <div class="step"><div class="step-num">1</div><div class="step-body">確認序列埠已連線且已載入正確 HEX 檔。</div></div>
   <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>⚡ 開始燒錄</strong>」。</div></div>
@@ -494,10 +589,11 @@ Key_production=False</pre>
   <ul>
     <li><span class="badge badge-uart">UART</span> 單行 ACK 錯誤最多重試 10 次；逾時或整體 CRC 錯誤時無限重試（每次等待 3 秒）。</li>
     <li><span class="badge badge-can">CAN</span> ACK 失敗最多整體重試 5 次，超過後放棄並報錯。</li>
+    <li><span class="badge badge-blecan">BLE-CAN</span> 單一分塊 NAK 最多重試 3 次，仍失敗則中止燒錄；逾時則整體燒錄重新開始（等待 3 秒後從頭傳送）。</li>
   </ul>
 </div>
 
-<h2 id="s12-4">停止燒錄</h2>
+<h2 id="s12-5">停止燒錄</h2>
 <p>燒錄進行中，按鈕變為「<strong>⏹ 停止燒錄</strong>」（灰色）。</p>
 <div class="steps">
   <div class="step"><div class="step-num">1</div><div class="step-body">點擊「<strong>⏹ 停止燒錄</strong>」，按鈕顯示「停止中...」並暫時 disabled。</div></div>
@@ -509,7 +605,7 @@ Key_production=False</pre>
   中途停止後裝置可能停留在 Bootloader 或韌體不完整狀態，需重新執行完整燒錄流程。
 </div>
 
-<h2 id="s12-5">UART / CAN 燒錄差異</h2>
+<h2 id="s12-6">UART / CAN 燒錄差異</h2>
 <table>
   <tr><th>項目</th><th><span class="badge badge-uart">UART</span></th><th><span class="badge badge-can">CAN</span></th></tr>
   <tr><td>傳送單位</td><td>HEX 檔每一行（<code>:</code> 或 <code>@</code> 開頭）</td><td>整個檔案文字，每 62 bytes 一段</td></tr>
@@ -589,7 +685,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.2.1 &nbsp;｜&nbsp; 2026-06-05
+  Endex eBike Tool 操作說明書 v1.3.0 &nbsp;｜&nbsp; 2026-06-12
 </div>
 
 </div>

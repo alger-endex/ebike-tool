@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.2.1';
+const APP_VERSION = 'v1.3.0';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -1480,7 +1480,7 @@ async function burnFlashUart(sig) {
 // ── BLE-CAN flash ────────────────────────────────────────
 
 async function burnFlashBleCan(sig) {
-  const CHUNK_SIZE = parseInt(document.getElementById('selBleChunk').value, 10) || 62;
+  const CHUNK_SIZE = parseInt(document.getElementById('selBleChunk').value, 10) || 124;
 
   // Build flat byte stream: each filtered line followed by \r\n
   const enc = new TextEncoder();
