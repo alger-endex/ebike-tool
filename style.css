@@ -20,6 +20,7 @@
   --top-h:     44px;
   --side-w:    220px;
   --status-h:  220px;
+  --param-font-size: 11px;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -181,6 +182,20 @@ body {
 }
 .field-row input:focus { outline: none; border-color: var(--accent); }
 .field-row input:disabled { opacity: .4; }
+.field-row input[type="range"] {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.field-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
 
 .mode-badge {
   margin: 8px 10px 0;
@@ -267,8 +282,8 @@ body {
 .param-row:hover { background: var(--bg3); }
 
 .param-name {
-  width: 170px;
-  font-size: 11px;
+  width: 200px;
+  font-size: var(--param-font-size);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -283,7 +298,7 @@ body {
 .param-name.setbit-name:hover { color: #fff; }
 
 .param-val-wrap {
-  width: 90px;
+  width: 60px;
   flex-shrink: 0;
 }
 .param-val-wrap input[type="text"] {

@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.3.0';
+const APP_VERSION = 'v1.4.0';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -1839,5 +1839,29 @@ if (!navigator.serial && !navigator.bluetooth) {
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+  });
+})();
+
+// ── 參數列表字體大小 ──
+(function () {
+  const slider = document.getElementById('rngParamFontSize');
+  const label  = document.getElementById('paramFontSizeVal');
+  const STORAGE_KEY = 'endex_param_font_size';
+  const MIN_SIZE = 10, MAX_SIZE = 16, DEFAULT_SIZE = 11;
+
+  function apply(size) {
+    document.documentElement.style.setProperty('--param-font-size', size + 'px');
+    label.textContent = size + 'px';
+  }
+
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+  const initial = (saved >= MIN_SIZE && saved <= MAX_SIZE) ? saved : DEFAULT_SIZE;
+  slider.value = initial;
+  apply(initial);
+
+  slider.addEventListener('input', () => {
+    const size = parseInt(slider.value, 10);
+    apply(size);
+    localStorage.setItem(STORAGE_KEY, size);
   });
 })();
