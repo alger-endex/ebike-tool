@@ -1833,27 +1833,25 @@ if (!navigator.serial && !navigator.bluetooth) {
 
   let startX, startW;
 
-  resizer.addEventListener('mousedown', e => {
+  resizer.addEventListener('pointerdown', e => {
+    resizer.setPointerCapture(e.pointerId);
     startX = e.clientX;
     startW = sidebar.offsetWidth;
     resizer.classList.add('resizing');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-
-    function onMove(e) {
-      const w = Math.min(MAX_W, Math.max(MIN_W, startW + e.clientX - startX));
-      sidebar.style.width = w + 'px';
-    }
-    function onUp() {
-      resizer.classList.remove('resizing');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+  });
+  resizer.addEventListener('pointermove', e => {
+    if (!resizer.classList.contains('resizing')) return;
+    const w = Math.min(MAX_W, Math.max(MIN_W, startW + e.clientX - startX));
+    sidebar.style.width = w + 'px';
+  });
+  resizer.addEventListener('pointerup', () => {
+    if (!resizer.classList.contains('resizing')) return;
+    resizer.classList.remove('resizing');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
   });
 })();
 

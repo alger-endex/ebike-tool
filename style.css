@@ -133,7 +133,14 @@ body {
   flex-shrink: 0;
   background: var(--border);
   cursor: col-resize;
+  touch-action: none;
   transition: background .15s;
+  position: relative;
+}
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 -6px;
 }
 .sidebar-resizer:hover,
 .sidebar-resizer.resizing {
