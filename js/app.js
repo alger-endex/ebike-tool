@@ -1833,26 +1833,43 @@ if (!navigator.serial && !navigator.bluetooth) {
 
   let startX, startW;
 
-  resizer.addEventListener('pointerdown', e => {
-    resizer.setPointerCapture(e.pointerId);
-    startX = e.clientX;
+  function startResize(clientX) {
+    startX = clientX;
     startW = sidebar.offsetWidth;
     resizer.classList.add('resizing');
-    document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-  });
-  resizer.addEventListener('pointermove', e => {
-    if (!resizer.classList.contains('resizing')) return;
-    const w = Math.min(MAX_W, Math.max(MIN_W, startW + e.clientX - startX));
+  }
+  function doResize(clientX) {
+    const w = Math.min(MAX_W, Math.max(MIN_W, startW + clientX - startX));
     sidebar.style.width = w + 'px';
-  });
-  resizer.addEventListener('pointerup', () => {
-    if (!resizer.classList.contains('resizing')) return;
+  }
+  function endResize() {
     resizer.classList.remove('resizing');
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
+  }
+
+  // 滑鼠
+  resizer.addEventListener('mousedown', e => {
+    startResize(e.clientX);
+    document.body.style.cursor = 'col-resize';
+    function onMove(e) { doResize(e.clientX); }
+    function onUp()   { endResize(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
   });
+
+  // 觸控
+  resizer.addEventListener('touchstart', e => {
+    e.preventDefault();
+    startResize(e.touches[0].clientX);
+  }, { passive: false });
+  resizer.addEventListener('touchmove', e => {
+    e.preventDefault();
+    doResize(e.touches[0].clientX);
+  }, { passive: false });
+  resizer.addEventListener('touchend', () => endResize());
 })();
 
 // ── 參數列表字體大小 ──
