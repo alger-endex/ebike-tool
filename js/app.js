@@ -1872,6 +1872,26 @@ if (!navigator.serial && !navigator.bluetooth) {
   resizer.addEventListener('touchend', () => endResize());
 })();
 
+// ── Sidebar 收合切換 ──
+(function () {
+  const sidebar = document.getElementById('sidebar');
+  const btn     = document.getElementById('btnSidebarToggle');
+  const LS_KEY  = 'endex_sidebar_collapsed';
+
+  function setCollapsed(collapsed) {
+    sidebar.classList.toggle('sidebar--collapsed', collapsed);
+    btn.textContent = collapsed ? '▶' : '◀';
+    localStorage.setItem(LS_KEY, collapsed ? '1' : '');
+  }
+
+  if (localStorage.getItem(LS_KEY)) setCollapsed(true);
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    setCollapsed(!sidebar.classList.contains('sidebar--collapsed'));
+  });
+})();
+
 // ── 參數列表字體大小 ──
 (function () {
   const slider = document.getElementById('rngParamFontSize');

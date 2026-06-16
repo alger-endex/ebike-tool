@@ -146,6 +146,31 @@ body {
 .sidebar-resizer.resizing {
   background: var(--accent);
 }
+.sidebar--collapsed {
+  width: 0 !important;
+  min-width: 0;
+  overflow: hidden;
+}
+.sb-toggle {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 36px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 0;
+}
+.sb-toggle:hover { color: var(--accent); }
 .sb-section {
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
