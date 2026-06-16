@@ -307,14 +307,29 @@ document.getElementById('btnImport').addEventListener('click', () => {
   });
 });
 
-document.getElementById('btnExport').addEventListener('click', () => {
+document.getElementById('btnExport').addEventListener('click', async () => {
   const list = state.showPara
     ? state.paraList
     : state.hrList.map(h => ({ address: h.address, data: h.data }));
   if (!list.length) { alert('沒有資料可匯出'); return; }
   const content = serializeConfigTxt(list);
-  downloadText(content, 'CONFIG.txt');
-  log('匯出完成');
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'CONFIG.txt',
+        types: [{ description: 'Config 設定檔', accept: { 'text/plain': ['.txt'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      log('匯出完成：' + handle.name);
+    } catch (e) {
+      if (e.name !== 'AbortError') log('匯出失敗：' + e.message);
+    }
+  } else {
+    downloadText(content, 'CONFIG.txt');
+    log('匯出完成');
+  }
 });
 
 // Show-Para checkbox
