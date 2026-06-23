@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.0';
+const APP_VERSION = 'v1.4.1';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -31,6 +31,7 @@ const state = {
   dataImport1: [],   // {address,data} — from last import (showPara=false)
   dataImport2: [],   // {address,data} — from last import (showPara=true)
   dataRead:    [],   // {address,data} — from last device read
+  paramFileHandle: null,   // FileSystemFileHandle — set when user picks parameter.ini via file picker
   comSerial: new SerialManager(),
   bleSerial: new BleManager(),
   serial:    null,   // active channel — set at boot and on channel change
@@ -225,15 +226,36 @@ document.getElementById('btnLoadPageIni').addEventListener('click', () => {
   });
 });
 
-document.getElementById('btnLoadParamIni').addEventListener('click', () => {
-  pickFile('.ini,.txt', async (file) => {
+document.getElementById('btnLoadParamIni').addEventListener('click', async () => {
+  if (window.showOpenFilePicker) {
+    let handle;
+    try {
+      [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'INI / TXT', accept: { 'text/plain': ['.ini', '.txt'] } }],
+        multiple: false,
+      });
+    } catch (e) {
+      if (e.name !== 'AbortError') log('開啟失敗：' + e.message);
+      return;
+    }
+    const file = await handle.getFile();
     const text = await file.text();
     localStorage.setItem(LS_PARAM, text);
     state.hrList = parseParameterIni(text);
+    state.paramFileHandle = handle;
     log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取]');
     rebuildTabs();
     updateAutoLoadStatus(state.tabList.length > 0 && state.hrList.length > 0);
-  });
+  } else {
+    pickFile('.ini,.txt', async (file) => {
+      const text = await file.text();
+      localStorage.setItem(LS_PARAM, text);
+      state.hrList = parseParameterIni(text);
+      log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取]');
+      rebuildTabs();
+      updateAutoLoadStatus(state.tabList.length > 0 && state.hrList.length > 0);
+    });
+  }
 });
 
 // ── Reload & Clear cache buttons ──
@@ -916,9 +938,21 @@ document.getElementById('btnConfig').addEventListener('click', async () => {
     if (old) newItem.data = old.data;
   });
   state.hrList = updated;
-  // Offer download of updated parameter.ini
-  downloadText(serializeParameterIni(updated), 'parameter.ini');
-  log('parameter.ini 已更新並下載');
+  const iniText = serializeParameterIni(updated);
+  localStorage.setItem(LS_PARAM, iniText);
+  if (state.paramFileHandle) {
+    try {
+      const writable = await state.paramFileHandle.createWritable();
+      await writable.write(iniText);
+      await writable.close();
+      log('parameter.ini 已更新並儲存：' + state.paramFileHandle.name);
+    } catch {
+      state.paramFileHandle = null;
+      await saveParamWithPicker(iniText);
+    }
+  } else {
+    await saveParamWithPicker(iniText);
+  }
   rebuildTabs();
 });
 
@@ -979,6 +1013,27 @@ function pickFile(accept, callback) {
   inp.accept = accept;
   inp.onchange = (e) => { if (e.target.files[0]) callback(e.target.files[0]); };
   inp.click();
+}
+
+async function saveParamWithPicker(iniText) {
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'parameter.ini',
+        types: [{ description: 'INI 設定檔', accept: { 'text/plain': ['.ini'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(iniText);
+      await writable.close();
+      state.paramFileHandle = handle;
+      log('parameter.ini 已更新並儲存：' + handle.name);
+    } catch (e) {
+      if (e.name !== 'AbortError') log('儲存失敗：' + e.message);
+    }
+  } else {
+    downloadText(iniText, 'parameter.ini');
+    log('parameter.ini 已更新並下載');
+  }
 }
 
 function downloadText(content, filename) {
