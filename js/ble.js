@@ -97,7 +97,7 @@ class BleManager {
     // ── Step 1: 掃描裝置 ────────────────────────────────────
     try {
       this._device = await navigator.bluetooth.requestDevice({
-        filters: [{ name: 'ESP_GATTS_DEMO' }],
+        acceptAllDevices: true,
         optionalServices: BLE_OPTIONAL_SERVICES,
       });
     } catch (e) {
