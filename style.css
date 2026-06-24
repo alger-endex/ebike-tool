@@ -833,7 +833,7 @@ body {
   /* Floating toggle button */
   .sb-toggle {
     position: fixed;
-    top: 30vh;
+    top: 45vh;
     left: 0;
     z-index: 301;
     transform: none;
