@@ -837,7 +837,10 @@ body {
     font-size: 16px;
     border-radius: 0 8px 8px 0;
     box-shadow: 2px 2px 10px rgba(0,0,0,.6);
+    opacity: 0.45;
   }
+  .sb-toggle:hover,
+  .sb-toggle:active { opacity: 1; }
 
   /* Sidebar backdrop */
   .sidebar-backdrop {
