@@ -796,12 +796,12 @@ body {
 @media (max-width: 768px) {
   :root { --status-h: 120px; }
 
-  /* Sidebar: slide-in overlay drawer (below topbar) */
+  /* Sidebar: slide-in overlay drawer (topbar 以下、statusbar 以上) */
   .sidebar {
     position: fixed;
     top: var(--top-h);
     left: 0;
-    bottom: 0;
+    bottom: calc(var(--status-h) + 24px);  /* 讓出 statusbar 空間 */
     z-index: 300;
     min-width: 0 !important;
     max-width: none;
@@ -849,7 +849,7 @@ body {
     top: var(--top-h);
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: calc(var(--status-h) + 24px);
     background: rgba(0,0,0,.55);
     z-index: 299;
   }
