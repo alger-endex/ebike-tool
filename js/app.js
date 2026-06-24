@@ -1915,12 +1915,14 @@ if (!navigator.serial && !navigator.bluetooth) {
     document.addEventListener('mouseup',   onUp);
   });
 
-  // 觸控
+  // 觸控（手機版不啟用 resize，避免攔截子元素的 touch 事件）
   resizer.addEventListener('touchstart', e => {
+    if (window.innerWidth <= 768) return;
     e.preventDefault();
     startResize(e.touches[0].clientX);
   }, { passive: false });
   resizer.addEventListener('touchmove', e => {
+    if (window.innerWidth <= 768) return;
     e.preventDefault();
     doResize(e.touches[0].clientX);
   }, { passive: false });
