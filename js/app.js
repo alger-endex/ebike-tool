@@ -1876,6 +1876,16 @@ if (!navigator.serial && !navigator.bluetooth) {
   document.getElementById('btnOpen').disabled = true;
 }
 
+// ── 桌機版：讓收合按鈕跟隨 sidebar 右邊緣 ──
+function updateSbTogglePos() {
+  if (window.innerWidth > 768) {
+    const s = document.getElementById('sidebar');
+    const b = document.getElementById('btnSidebarToggle');
+    const r = document.getElementById('sidebarResizer');
+    if (s && b) b.style.left = (s.offsetWidth + (r ? r.offsetWidth : 5)) + 'px';
+  }
+}
+
 // ── Sidebar resize ──
 (function () {
   const sidebar  = document.getElementById('sidebar');
@@ -1897,12 +1907,14 @@ if (!navigator.serial && !navigator.bluetooth) {
   function doResize(clientX) {
     const w = Math.min(MAX_W, Math.max(MIN_W, startW + clientX - startX));
     sidebar.style.width = w + 'px';
+    updateSbTogglePos();
   }
   function endResize() {
     resizer.classList.remove('resizing');
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
+    updateSbTogglePos();
   }
 
   // 滑鼠
@@ -1942,10 +1954,12 @@ if (!navigator.serial && !navigator.bluetooth) {
     btn.textContent = collapsed ? '▶' : '◀';
     localStorage.setItem(LS_KEY, collapsed ? '1' : '');
     if (backdrop) backdrop.classList.toggle('active', !collapsed && isMobile());
+    updateSbTogglePos();
   }
 
   // 行動版預設收合；桌機讀 localStorage
   setCollapsed(isMobile() ? true : !!localStorage.getItem(LS_KEY));
+  updateSbTogglePos();
 
   btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -1956,6 +1970,7 @@ if (!navigator.serial && !navigator.bluetooth) {
 
   window.addEventListener('resize', () => {
     if (!isMobile() && backdrop) backdrop.classList.remove('active');
+    updateSbTogglePos();
   });
 })();
 

@@ -152,10 +152,8 @@ body {
   overflow: hidden;
 }
 .sb-toggle {
-  position: absolute;
+  position: fixed;  /* left 由 JS 動態設定（桌機跟隨 sidebar 寬度） */
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 18px;
   height: 36px;
   background: var(--bg3);
@@ -819,10 +817,9 @@ body {
     overflow-y: hidden !important;
   }
 
-  /* Resizer: zero-width, keep button visible via fixed positioning */
+  /* Resizer: 手機版隱藏拖拉條 */
   .sidebar-resizer {
     width: 0;
-    overflow: visible;
     background: transparent !important;
     cursor: default;
     pointer-events: none;
@@ -830,19 +827,16 @@ body {
   .sidebar-resizer:hover,
   .sidebar-resizer.resizing { background: transparent !important; }
 
-  /* Floating toggle button */
+  /* Floating toggle button — 已移至 resizer 外部，直接 position:fixed */
   .sb-toggle {
-    position: fixed;
-    top: 45vh;
-    left: 0;
+    top: 55vh;
+    left: 0 !important;  /* 蓋過 JS inline style */
     z-index: 301;
-    transform: none;
     width: 40px;
     height: 56px;
     font-size: 16px;
     border-radius: 0 8px 8px 0;
     box-shadow: 2px 2px 10px rgba(0,0,0,.6);
-    pointer-events: auto;
   }
 
   /* Sidebar backdrop */
