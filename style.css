@@ -794,6 +794,88 @@ body {
 .btn-danger-sm:hover { background: var(--danger); color: #111; }
 .btn-sm-text { font-size: 11px; }
 
+/* ── Mobile (≤ 768px) ── */
+@media (max-width: 768px) {
+  :root { --status-h: 120px; }
+
+  /* Sidebar: slide-in overlay drawer (below topbar) */
+  .sidebar {
+    position: fixed;
+    top: var(--top-h);
+    left: 0;
+    bottom: 0;
+    z-index: 300;
+    min-width: 0 !important;
+    max-width: none;
+    width: min(82vw, 300px) !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: transform 0.25s ease;
+    transform: translateX(0);
+  }
+  .sidebar--collapsed {
+    transform: translateX(-100%) !important;
+    width: min(82vw, 300px) !important;  /* override base width:0 */
+    overflow-y: hidden !important;
+  }
+
+  /* Resizer: zero-width, keep button visible via fixed positioning */
+  .sidebar-resizer {
+    width: 0;
+    overflow: visible;
+    background: transparent !important;
+    cursor: default;
+    pointer-events: none;
+  }
+  .sidebar-resizer:hover,
+  .sidebar-resizer.resizing { background: transparent !important; }
+
+  /* Floating toggle button */
+  .sb-toggle {
+    position: fixed;
+    top: calc(var(--top-h) + 8px);
+    left: 0;
+    z-index: 301;
+    transform: none;
+    width: 28px;
+    height: 36px;
+    font-size: 12px;
+    border-radius: 0 6px 6px 0;
+    box-shadow: 2px 2px 8px rgba(0,0,0,.5);
+    pointer-events: auto;
+  }
+
+  /* Sidebar backdrop */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: var(--top-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 299;
+  }
+  .sidebar-backdrop.active { display: block; }
+
+  /* Status bar: shorter */
+  .statusbar { height: calc(120px + 24px); }
+
+  /* Parameter columns: slightly narrower */
+  .param-col  { min-width: 300px; }
+  .param-name { width: 150px; }
+
+  /* Modals: full viewport width */
+  .modal-box  { max-width: 99vw; max-height: 95vh; }
+  .modal-xl   { width: 99vw; }
+  .modal-body { padding: 8px; }
+  .modal-ftr  { flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+
+  /* Driver Status: single-column register panels */
+  .drv-registers { grid-template-columns: 1fr; }
+  .drv-metrics   { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+}
+
 /* scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg2); }

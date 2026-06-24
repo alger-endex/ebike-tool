@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.2';
+const APP_VERSION = 'v1.4.3';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -1929,21 +1929,31 @@ if (!navigator.serial && !navigator.bluetooth) {
 
 // ── Sidebar 收合切換 ──
 (function () {
-  const sidebar = document.getElementById('sidebar');
-  const btn     = document.getElementById('btnSidebarToggle');
-  const LS_KEY  = 'endex_sidebar_collapsed';
+  const sidebar  = document.getElementById('sidebar');
+  const btn      = document.getElementById('btnSidebarToggle');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const LS_KEY   = 'endex_sidebar_collapsed';
+  const isMobile = () => window.innerWidth <= 768;
 
   function setCollapsed(collapsed) {
     sidebar.classList.toggle('sidebar--collapsed', collapsed);
     btn.textContent = collapsed ? '▶' : '◀';
     localStorage.setItem(LS_KEY, collapsed ? '1' : '');
+    if (backdrop) backdrop.classList.toggle('active', !collapsed && isMobile());
   }
 
-  if (localStorage.getItem(LS_KEY)) setCollapsed(true);
+  // 行動版預設收合；桌機讀 localStorage
+  setCollapsed(isMobile() ? true : !!localStorage.getItem(LS_KEY));
 
   btn.addEventListener('click', e => {
     e.stopPropagation();
     setCollapsed(!sidebar.classList.contains('sidebar--collapsed'));
+  });
+
+  if (backdrop) backdrop.addEventListener('click', () => setCollapsed(true));
+
+  window.addEventListener('resize', () => {
+    if (!isMobile() && backdrop) backdrop.classList.remove('active');
   });
 })();
 
