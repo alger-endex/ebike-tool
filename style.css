@@ -871,9 +871,9 @@ body {
   .hex-chk-wrap { font-size: 12px; gap: 4px; }
   .hex-chk-wrap input[type="checkbox"] { width: 16px; height: 16px; }
 
-  /* Parameter columns: slightly narrower */
-  .param-col  { min-width: 300px; }
-  .param-name { width: 150px; }
+  /* Parameter columns */
+  .param-col  { min-width: 340px; }
+  .param-name { width: 190px; }
 
   /* Modals: full viewport width */
   .modal-box  { max-width: 99vw; max-height: 95vh; }
