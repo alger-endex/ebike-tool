@@ -298,7 +298,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  min-width: 370px;
+  min-width: 410px;
   flex-shrink: 0;
 }
 .param-row {
@@ -312,7 +312,7 @@ body {
 .param-row:hover { background: var(--bg3); }
 
 .param-name {
-  width: 200px;
+  width: 240px;
   font-size: var(--param-font-size);
   overflow: hidden;
   text-overflow: ellipsis;
