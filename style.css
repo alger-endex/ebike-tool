@@ -352,7 +352,7 @@ body {
   border-radius: var(--radius);
   padding: 1px 5px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 16px;
 }
 .param-val-wrap input[type="text"]:focus { outline: none; border-color: var(--accent); }
 .param-val-wrap input[type="text"].out-of-range { border-color: var(--danger); }
