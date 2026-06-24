@@ -153,7 +153,8 @@ body {
 }
 .sb-toggle {
   position: fixed;  /* left 由 JS 動態設定（桌機跟隨 sidebar 寬度） */
-  top: 12px;
+  top: auto;
+  bottom: calc(var(--status-h) + 24px + 8px);  /* 緊貼 statusbar 上方 */
   width: 18px;
   height: 36px;
   background: var(--bg3);
@@ -842,8 +843,6 @@ body {
 
   /* Floating toggle button — 已移至 resizer 外部，直接 position:fixed */
   .sb-toggle {
-    top: auto;
-    bottom: calc(var(--status-h) + 24px + 8px);  /* 緊貼 statusbar 上方 */
     left: 0 !important;  /* 蓋過 JS inline style */
     z-index: 301;
     width: 40px;
