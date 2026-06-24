@@ -859,6 +859,10 @@ body {
   /* Status bar: shorter */
   .statusbar { height: calc(120px + 24px); }
 
+  /* Tab bar: 加高，方便觸控 */
+  .tab-bar { padding: 6px 8px 0; gap: 4px; }
+  .tab-btn  { padding: 10px 16px; font-size: 14px; }
+
   /* Parameter columns: slightly narrower */
   .param-col  { min-width: 300px; }
   .param-name { width: 150px; }
