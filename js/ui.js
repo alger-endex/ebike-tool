@@ -88,12 +88,19 @@ function buildParamRow(item, idx, onParamChange, onSetBitClick) {
   const addrHex = item.address.toString(16).toUpperCase().padStart(4, '0');
   const nameEl  = document.createElement('span');
   nameEl.className = 'param-name' + (item.setBit ? ' setbit-name' : '');
-  nameEl.textContent = item.name + ' (0x' + addrHex + ')';
   nameEl.dataset.idx = idx;
   if (item.tooltip) nameEl.title = item.tooltip.replace(/\\n/g, '\n');
   if (item.setBit) {
     nameEl.addEventListener('click', function() { onSetBitClick(idx); });
   }
+  const nameText = document.createElement('span');
+  nameText.className = 'param-name-text';
+  nameText.textContent = item.name;
+  const addrText = document.createElement('span');
+  addrText.className = 'param-addr';
+  addrText.textContent = '(0x' + addrHex + ')';
+  nameEl.appendChild(nameText);
+  nameEl.appendChild(addrText);
   item.nameEl = nameEl;
 
   const valWrap = document.createElement('div');
