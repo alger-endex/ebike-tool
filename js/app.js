@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.3';
+const APP_VERSION = 'v1.4.4';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -528,9 +528,17 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
       const rr = await state.serial.readCanFrame(1000);
       const rp = rr ? parseCanResponse(rr) : null;
       log(rp?.data[1] !== 0x86 ? 'reLoad ok' : 'reLoad Err');
+
+      await sleep(1000);
+      const saveCheck = await readCanParam(0x0555);
+      log(saveCheck === 0 ? 'Save 成功' : 'Save 失敗');
     } else {
       state.serial.clearBuffer();
       await state.serial.write(buildUartSave());
+
+      await sleep(1000);
+      const saveCheck = await readUartParam(0x0555);
+      log(saveCheck === 0 ? 'Save 成功' : 'Save 失敗');
     }
   } catch (e) {
     log('儲存指令異常: ' + e.message);
