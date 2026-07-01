@@ -94,6 +94,29 @@ body {
   border-bottom: 1px solid var(--border);
   margin-bottom: 6px;
 }
+.manual-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1;
+  transition: background .15s, color .15s;
+}
+.manual-link:hover {
+  background: var(--accent2);
+  border-color: var(--accent);
+  color: #fff;
+}
 .status-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
