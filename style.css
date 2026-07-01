@@ -18,6 +18,7 @@
   --font:      'Segoe UI', 'Microsoft JhengHei', sans-serif;
   --mono:      'Consolas', 'Courier New', monospace;
   --top-h:     44px;
+  --action-h:  72px;   /* actionbar: 2 rows × 36px */
   --side-w:    220px;
   --status-h:  220px;
   --param-font-size: 11px;
@@ -889,10 +890,20 @@ body {
 @media (max-width: 768px) {
   :root { --status-h: 120px; }
 
-  /* Sidebar: slide-in overlay drawer (topbar 以下、statusbar 以上) */
+  /* Action bar: 每行改為水平捲動，避免右側被裁 */
+  .actionbar-row {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;       /* Firefox */
+  }
+  .actionbar-row::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
+  .actionbar .btn { padding: 4px 10px; }
+
+  /* Sidebar: slide-in overlay drawer (actionbar 以下、statusbar 以上) */
   .sidebar {
     position: fixed;
-    top: var(--top-h);
+    top: calc(var(--top-h) + var(--action-h));
     left: 0;
     bottom: calc(var(--status-h) + 24px);  /* 讓出 statusbar 空間 */
     z-index: 300;
@@ -938,7 +949,7 @@ body {
   .sidebar-backdrop {
     display: none;
     position: fixed;
-    top: var(--top-h);
+    top: calc(var(--top-h) + var(--action-h));
     left: 0;
     right: 0;
     bottom: calc(var(--status-h) + 24px);
