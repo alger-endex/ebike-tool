@@ -87,6 +87,12 @@ body {
   white-space: nowrap;
   padding-right: 8px;
 }
+.sb-app-title {
+  padding: 2px 0 6px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
 .status-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
@@ -106,6 +112,79 @@ body {
   white-space: nowrap;
   font-family: var(--mono);
   letter-spacing: 0.02em;
+}
+
+/* ── Action bar ── */
+.actionbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.actionbar-row {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.actionbar-row + .actionbar-row {
+  border-top: 1px solid var(--border);
+}
+.actionbar .btn { padding: 3px 14px; font-size: 12px; }
+.ab-field-lbl {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.ab-field-input {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: #ffffff;
+  border-radius: var(--radius);
+  padding: 2px 6px;
+  font-family: var(--mono);
+  font-size: 15px;
+  width: 90px;
+}
+.ab-field-input.ab-sn { width: 130px; }
+.ab-field-input:focus { outline: none; border-color: var(--accent); }
+.ab-field-input:disabled { opacity: .4; }
+.actionbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* 顯示比較參數 — actionbar 內的 checkbox + 懸停 popup */
+.ab-para-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ab-chk { margin: 0; font-size: 12px; }
+.ab-legend-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  margin: 0;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+.ab-para-wrap:hover .ab-legend-popup,
+.ab-para-wrap:focus-within .ab-legend-popup {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* ── Workspace ── */

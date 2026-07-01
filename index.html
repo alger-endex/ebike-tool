@@ -58,8 +58,46 @@
     </div>
     <button id="btnClose" class="btn">關閉</button>
   </div>
-  <div class="app-title">Endex eBike Tool <span id="appVersion" class="version-badge"></span></div>
 </header>
+
+<!-- ── Action bar ── -->
+<div class="actionbar">
+  <!-- 第一行 -->
+  <div class="actionbar-row">
+    <button id="btnImport" class="btn">匯入 Config</button>
+    <button id="btnExport" class="btn">匯出 Config</button>
+    <button id="btnDiff"   class="btn btn-diff">⇄ 比對差異</button>
+    <div class="actionbar-sep"></div>
+    <button id="btnRead"  class="btn btn-action">讀取參數</button>
+    <button id="btnWrite" class="btn btn-action">寫入參數</button>
+  </div>
+  <!-- 第二行：工程欄位 -->
+  <div class="actionbar-row" id="engSection">
+    <div class="ab-para-wrap">
+      <label class="chk-label ab-chk">
+        <input type="checkbox" id="chkShowPara">
+        <span id="showParaLabel">顯示比較參數</span>
+      </label>
+      <div id="showParaLegend" class="show-para-legend ab-legend-popup">
+        <div class="legend-src-row">
+          <span class="legend-item legend-para">■ 有勾 副 — 來自 paraList</span>
+          <div class="src-row"><span class="src-key legend-para">副</span><span class="src-label">更新來源</span><span id="paraListSrc" class="src-val">—</span></div>
+        </div>
+        <div class="legend-src-row">
+          <span class="legend-item legend-fallback">■ 無勾 主 — fallback hrList</span>
+          <div class="src-row"><span class="src-key legend-fallback">主</span><span class="src-label">更新來源</span><span id="hrListSrc" class="src-val">—</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="actionbar-sep"></div>
+    <span class="ab-field-lbl">SIG</span>
+    <input type="text" id="tboxSIG" class="ab-field-input" maxlength="8" spellcheck="false">
+    <span class="ab-field-lbl">SN</span>
+    <input type="text" id="tboxSN"  class="ab-field-input ab-sn" maxlength="16" spellcheck="false">
+    <div class="actionbar-sep"></div>
+    <button id="btnConfig" class="btn">參數配置</button>
+  </div>
+</div>
 
 <!-- ── Main workspace ── -->
 <div class="workspace">
@@ -68,6 +106,7 @@
   <aside class="sidebar" id="sidebar">
 
     <section class="sb-section">
+      <div class="app-title sb-app-title">Endex eBike Tool <span id="appVersion" class="version-badge"></span></div>
       <h4 class="sb-title">設定檔</h4>
       <div id="autoLoadStatus" class="auto-status">載入中...</div>
       <div class="btn-row">
@@ -85,29 +124,10 @@
         <input type="range" id="rngParamFontSize" min="8" max="28" step="1" value="11">
         <span id="paramFontSizeVal" class="field-val">11px</span>
       </div>
-      <label class="chk-label">
-        <input type="checkbox" id="chkShowPara">
-        <span id="showParaLabel">顯示比較參數</span>
-      </label>
-      <div id="showParaLegend" class="show-para-legend">
-        <div class="legend-src-row">
-          <span class="legend-item legend-para">■ 有勾 副 — 來自 paraList</span>
-          <div class="src-row"><span class="src-key legend-para">副</span><span class="src-label">更新來源</span><span id="paraListSrc" class="src-val">—</span></div>
-        </div>
-        <div class="legend-src-row">
-          <span class="legend-item legend-fallback">■ 無勾 主 — fallback hrList</span>
-          <div class="src-row"><span class="src-key legend-fallback">主</span><span class="src-label">更新來源</span><span id="hrListSrc" class="src-val">—</span></div>
-        </div>
-      </div>
-      <button id="btnImport" class="btn btn-block">匯入 Config</button>
-      <button id="btnExport" class="btn btn-block">匯出 Config</button>
-      <button id="btnDiff"   class="btn btn-block btn-diff">⇄ 比對差異</button>
     </section>
 
     <section class="sb-section">
-      <h4 class="sb-title">裝置</h4>
-      <button id="btnRead"  class="btn btn-block btn-action">讀取參數</button>
-      <button id="btnWrite" class="btn btn-block btn-action">寫入參數</button>
+      <h4 class="sb-title">裝置監控</h4>
       <button id="btnDriverStatus" class="btn btn-block btn-monitor" title="即時監控裝置狀態 (CAN only)">⚡ Driver Status</button>
     </section>
 
@@ -138,18 +158,6 @@
       </div>
     </section>
 
-    <section class="sb-section" id="engSection">
-      <h4 class="sb-title">工程</h4>
-      <button id="btnConfig" class="btn btn-block">參數配置</button>
-      <div class="field-row">
-        <span class="field-lbl">SIG</span>
-        <input type="text" id="tboxSIG" maxlength="8" spellcheck="false">
-      </div>
-      <div class="field-row">
-        <span class="field-lbl">SN</span>
-        <input type="text" id="tboxSN" maxlength="16" spellcheck="false">
-      </div>
-    </section>
 
     <!-- Production fields — hidden by default (Ctrl+P to show) -->
     <section class="sb-section prod-section" id="prodSection" style="display:none">
