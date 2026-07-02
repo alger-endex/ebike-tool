@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.4.6</title>
+<title>Endex eBike Tool — 操作說明書 v1.4.7</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.4.6</div>
+  <div class="cover-ver">操作說明書 v1.4.7</div>
   <div class="cover-date">2026-07-02</div>
 </div>
 
@@ -708,6 +708,17 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.4.7</strong></td>
+      <td>2026-07-02</td>
+      <td>
+        <ul>
+          <li>側欄新增顯示目前載入的 parameter.ini 檔名，方便切換不同機種設定檔時確認</li>
+          <li>修正 SIG 編輯後寫回位元組順序錯誤：encodeSig() 交換迴圈少跑一半，導致 SIG0／SIG1 兩個暫存器被寫成高低位元組互換的錯誤值</li>
+          <li>生產資訊分段輸入（Place／ToolNo／Person／Date／SerialNo）新增長度驗證，輸入錯誤會於狀態紀錄告知並中止寫入；輸入成功也會記錄</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.4.6</strong></td>
       <td>2026-07-02</td>
       <td>
@@ -807,7 +818,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.4.6 &nbsp;｜&nbsp; 2026-07-02
+  Endex eBike Tool 操作說明書 v1.4.7 &nbsp;｜&nbsp; 2026-07-02
 </div>
 
 </div>

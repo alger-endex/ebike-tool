@@ -892,6 +892,17 @@ body {
 .auto-status.ok   { background: #1e3a1e; color: var(--success); }
 .auto-status.warn { background: #3a2a10; color: var(--warn); }
 
+.ini-filename {
+  font-size: 11px;
+  padding: 0 2px;
+  margin-bottom: 5px;
+  text-align: center;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .btn-row {
   display: flex;
   gap: 4px;

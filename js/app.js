@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.6';
+const APP_VERSION = 'v1.4.7';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -160,6 +160,14 @@ function checkSigProtocolMatch() {
 // ─────────────────────────────────────────────────────────────
 const LS_PAGE  = 'endex_page_ini';
 const LS_PARAM = 'endex_parameter_ini';
+const LS_PARAM_NAME = 'endex_parameter_ini_name';
+
+/** Update the "currently loaded parameter.ini" filename display + cache. */
+function setParamIniName(name) {
+  localStorage.setItem(LS_PARAM_NAME, name);
+  const el = document.getElementById('paramIniName');
+  if (el) el.textContent = '📄 ' + name;
+}
 
 /**
  * Try to load INI files automatically:
@@ -179,6 +187,7 @@ async function autoLoadIni() {
     const r = await fetch('./parameter.ini');
     if (r.ok) { paramText = await r.text(); }
   } catch {}
+  const paramFromFetch = paramText !== null;
 
   // ── Step 2: localStorage cache ──
   if (!pageText)  pageText  = localStorage.getItem(LS_PAGE);
@@ -192,7 +201,9 @@ async function autoLoadIni() {
   }
   if (paramText) {
     state.hrList = parseParameterIni(paramText);
-    log('parameter.ini 載入 (' + (fromCache ? '快取' : '檔案') + ') → ' + state.hrList.length + ' 個參數');
+    const paramName = paramFromFetch ? 'parameter.ini' : (localStorage.getItem(LS_PARAM_NAME) || 'parameter.ini');
+    setParamIniName(paramName);
+    log('parameter.ini 載入 (' + (paramFromFetch ? '檔案' : '快取') + ': ' + paramName + ') → ' + state.hrList.length + ' 個參數');
   }
   if (state.tabList.length && state.hrList.length) {
     rebuildTabs();
@@ -243,7 +254,8 @@ document.getElementById('btnLoadParamIni').addEventListener('click', async () =>
     localStorage.setItem(LS_PARAM, text);
     state.hrList = parseParameterIni(text);
     state.paramFileHandle = handle;
-    log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取]');
+    setParamIniName(file.name);
+    log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取: ' + file.name + ']');
     rebuildTabs();
     updateAutoLoadStatus(state.tabList.length > 0 && state.hrList.length > 0);
   } else {
@@ -251,7 +263,8 @@ document.getElementById('btnLoadParamIni').addEventListener('click', async () =>
       const text = await file.text();
       localStorage.setItem(LS_PARAM, text);
       state.hrList = parseParameterIni(text);
-      log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取]');
+      setParamIniName(file.name);
+      log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取: ' + file.name + ']');
       rebuildTabs();
       updateAutoLoadStatus(state.tabList.length > 0 && state.hrList.length > 0);
     });
@@ -267,8 +280,11 @@ document.getElementById('btnReloadIni').addEventListener('click', () => {
 document.getElementById('btnClearIniCache').addEventListener('click', () => {
   localStorage.removeItem(LS_PAGE);
   localStorage.removeItem(LS_PARAM);
+  localStorage.removeItem(LS_PARAM_NAME);
   state.tabList = [];
   state.hrList  = [];
+  const el = document.getElementById('paramIniName');
+  if (el) el.textContent = '';
   rebuildTabs();
   updateAutoLoadStatus(false);
   log('INI 快取已清除');
@@ -680,13 +696,19 @@ document.getElementById('tboxSN').addEventListener('keydown', (e) => {
   if (!el) return;
   el.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
-    if (field === 'Date' && !isValidDate(el.value)) { log('日期格式錯誤 (YYMMDD)'); return; }
+    const key = field.charAt(0).toLowerCase() + field.slice(1);
+    const { len } = SN_LAYOUT[key];
+    if (el.value.length !== len) {
+      log(`❌ ${field} 輸入錯誤：需為 ${len} 個字元（目前 ${el.value.length} 個）`);
+      return;
+    }
+    if (field === 'Date' && !isValidDate(el.value)) { log('❌ 日期格式錯誤 (YYMMDD)'); return; }
     const snEl  = document.getElementById('tboxSN');
     const snStr = (snEl.value || '').padEnd(16, '\0').slice(0, 16);
-    const key   = field.charAt(0).toLowerCase() + field.slice(1);
     const newSn = snSetField(snStr, key, el.value);
     snEl.value  = newSn;
     writeSnToList(newSn);
+    log(`✅ ${field} 輸入完成 → "${el.value}"`);
   });
 });
 
@@ -1034,6 +1056,7 @@ async function saveParamWithPicker(iniText) {
       await writable.write(iniText);
       await writable.close();
       state.paramFileHandle = handle;
+      setParamIniName(handle.name);
       log('parameter.ini 已更新並儲存：' + handle.name);
     } catch (e) {
       if (e.name !== 'AbortError') log('儲存失敗：' + e.message);

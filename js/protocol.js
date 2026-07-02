@@ -155,7 +155,7 @@ function decodeSig(list) {
 function encodeSig(sigStr) {
   if (sigStr.length !== 8) return null;
   const chars = sigStr.split('');
-  for (let i = 0; i < 4; i += 2)
+  for (let i = 0; i < chars.length; i += 2)
     [chars[i], chars[i + 1]] = [chars[i + 1], chars[i]];
   const hex = chars.map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join('');
   const result = [];
