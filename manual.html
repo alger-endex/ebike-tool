@@ -157,6 +157,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
     <li><a href="#s14">快捷鍵一覽</a></li>
     <li><a href="#s15">Debug 序列埠</a></li>
     <li><a href="#s16">疑難排解</a></li>
+    <li><a href="#s17">版本修改歷程</a></li>
   </ol>
 </div>
 
@@ -180,7 +181,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <h2 id="s2-1">頂部列</h2>
 <table>
   <tr><th>元件</th><th>說明</th></tr>
-  <tr><td>Channel</td><td>選擇連線通道：<code>Comport</code>（USB 序列埠，預設）或 <code>BLE</code></td></tr>
+  <tr><td>位址分布依機種不同，80 個  or</td><td>選擇連線通道：<code>Comport</code>（USB 序列埠，預設）或 <code>BLE</code></td></tr>
   <tr><td>開啟連線</td><td>依 Channel 選擇彈出瀏覽器 COM Port 選擇視窗或 BLE 裝置配對視窗，確認後建立連線</td></tr>
   <tr><td>● 狀態燈</td><td>灰色＝未連線　綠色＝已連線</td></tr>
   <tr><td>Protocol</td><td>選擇通訊協議：<code>UART</code> 或 <code>CAN</code>（預設 CAN）</td></tr>
@@ -697,6 +698,103 @@ Key_production=False</pre>
   <tr><td>燒錄後裝置無法啟動</td><td>中途停止導致韌體不完整</td><td>裝置保持在 Bootloader，重新執行完整燒錄流程</td></tr>
   <tr><td>Driver Status 無數值更新</td><td>非 CAN 模式或裝置未連線</td><td>確認 Protocol=CAN 且序列埠已開啟</td></tr>
   <tr><td>匯出的 CONFIG.txt 為空</td><td>未載入 INI 或未讀取 / 匯入資料</td><td>先載入 INI，執行讀取參數或匯入 Config</td></tr>
+</table>
+
+<!-- S17 -->
+<h1 id="s17">版本修改歷程</h1>
+<table>
+  <thead>
+    <tr><th style="width:70px">版本</th><th style="width:96px">日期</th><th>主要修改項目</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>v1.4.5</strong></td>
+      <td>2026-07-01</td>
+      <td>
+        <ul>
+          <li>新增動作列（Action Bar）— 匯入／匯出、比對差異、讀取／寫入參數、SIG／SN 欄位、參數配置等功能鍵移至 Topbar 下方兩列</li>
+          <li>手機版動作列支援水平捲動，修正 Sidebar 頂部偏移</li>
+          <li>修正參數單位欄寬度不足（40 px → 70 px）</li>
+          <li>側欄新增說明書快捷連結按鈕</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.4.4</strong></td>
+      <td>2026-06-30</td>
+      <td>
+        <ul>
+          <li>寫入參數後自動讀取位址 0x0555，驗證 Save 指令是否成功</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.4.3</strong></td>
+      <td>2026-06-24</td>
+      <td>
+        <ul>
+          <li>手機版 UI 全面響應式調整：Tab 列加高、參數列加高、名稱欄加寬，方便觸控操作</li>
+          <li>狀態紀錄字體加大（11 px → 15 px）；參數數值輸入框字體加大（12 px → 16 px）</li>
+          <li>參數名稱字體調整範圍改為 8 px ～ 28 px</li>
+          <li>隱藏 Topbar 的 Data Bits / Stop Bits / Parity 選項（固定 8N1）</li>
+          <li>側欄收合按鈕移至狀態紀錄上方</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.4.2</strong></td>
+      <td>2026-06-23</td>
+      <td>
+        <ul>
+          <li>BLE 掃描改為列出所有裝置，由使用者手動選擇配對</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.4.1</strong></td>
+      <td>2026-06-23</td>
+      <td>
+        <ul>
+          <li>參數配置儲存改用系統對話框，可指定路徑並直接回寫原始 INI 檔</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.4.0</strong></td>
+      <td>2026-06-16</td>
+      <td>
+        <ul>
+          <li>參數名稱字體大小可用滑桿即時調整（8 px ～ 28 px）</li>
+          <li>匯出 Config 改用系統另存新檔對話框，可自訂路徑與檔名</li>
+          <li>Sidebar 分隔線支援滑鼠及觸控拖曳調寬</li>
+          <li>新增 Sidebar 收合／展開按鈕（手機版可全螢幕顯示參數頁籤）</li>
+          <li>部署至 GitHub Pages</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.3.0</strong></td>
+      <td>2026-06-12</td>
+      <td>
+        <ul>
+          <li>BLE-CAN 封包大小簡化，移除可選封包大小選項</li>
+          <li>操作說明書補充連線步驟與燒錄方式說明</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>v1.2.1</strong></td>
+      <td>2026-06-05</td>
+      <td>
+        <ul>
+          <li>寫入參數安全強化：寫入前 SIG 預驗證、逐筆記錄 log、數量不符提示</li>
+          <li>Sidebar 可拖曳調整寬度；showPara 比較面板新增資料來源標示</li>
+          <li>SIG 比對邏輯修正</li>
+          <li>BLE-CAN 燒錄 Bug 修正，新增燒錄時序測量</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
