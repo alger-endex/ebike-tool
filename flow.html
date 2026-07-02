@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endex eBike Tool — 讀取/寫入參數 流程說明</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a1a;--bg2:#242424;--bg3:#2e2e2e;
+  --text:#e0e0e0;--text-dim:#888;
+  --accent:#4a9eff;--border:#3a3a3a;
+  --ok:#4caf50;--err:#f44336;--warn:#ff9800;
+  --mono:'Consolas','Courier New',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.6}
+.wrap{max-width:960px;margin:0 auto;padding:32px 24px}
+h1{font-size:22px;color:var(--accent);margin-bottom:6px}
+h2{font-size:17px;color:var(--accent);margin:32px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+h3{font-size:14px;color:#ccc;margin:20px 0 8px}
+p{margin-bottom:10px;color:var(--text-dim)}
+.cover{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px 32px;margin-bottom:36px}
+.cover-title{font-size:20px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.cover-sub{color:var(--text-dim);font-size:13px}
+
+/* TOC */
+.toc{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px 20px;margin-bottom:32px;display:inline-block;min-width:260px}
+.toc h2{margin:0 0 10px;font-size:14px}
+.toc ol{padding-left:18px}
+.toc li{margin:3px 0}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+
+/* Flowchart */
+.flow-box{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:20px 24px;margin:16px 0;overflow-x:auto}
+.flow-box pre{font-family:var(--mono);font-size:13px;color:#d4e6ff;line-height:1.5;white-space:pre}
+
+/* Step table */
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th{background:var(--bg3);color:var(--accent);padding:7px 12px;text-align:left;border:1px solid var(--border);font-size:13px}
+td{padding:7px 12px;border:1px solid var(--border);vertical-align:top;font-size:13px}
+tr:nth-child(even) td{background:#1e1e1e}
+td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:12px;color:#f0c060}
+
+/* Packet diagram */
+.pkt{display:flex;flex-wrap:nowrap;gap:2px;margin:10px 0;font-family:var(--mono);font-size:11px;overflow-x:auto}
+.pkt-cell{border:1px solid var(--border);background:#1e2a3a;padding:6px 8px;text-align:center;border-radius:3px;white-space:nowrap}
+.pkt-cell .byte-label{color:#aac4ff;font-size:10px;display:block}
+.pkt-cell .byte-val{color:#f0c060}
+.pkt-fixed{background:#1e1e2a}
+.pkt-addr{background:#1a2e1a}
+.pkt-data{background:#2a1e1a}
+.pkt-crc{background:#2a1e2e}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px;vertical-align:middle}
+.badge-uart{background:#1a3a5a;color:#7ac0ff}
+.badge-can{background:#1a3a1a;color:#7aff9a}
+.badge-both{background:#3a2a1a;color:#ffc07a}
+
+.note{background:#1e2a1e;border-left:3px solid var(--ok);padding:10px 14px;border-radius:0 4px 4px 0;margin:12px 0;font-size:13px;color:#b0d0b0}
+.warn{background:#2a1e1a;border-left:3px solid var(--warn);padding:10px 14px;border-radius:0 4px 4px 0;margin:12px 0;font-size:13px;color:#d0b080}
+.danger{background:#2a1a1a;border-left:3px solid var(--err);padding:10px 14px;border-radius:0 4px 4px 0;margin:12px 0;font-size:13px;color:#d08080}
+
+.sep{border:none;border-top:1px solid var(--border);margin:32px 0}
+.tag{color:var(--text-dim);font-size:11px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="cover">
+  <div class="cover-title">Endex eBike Tool — 讀取/寫入參數 流程說明</div>
+  <div class="cover-sub">技術文件　v1.4.5　2026-07-02</div>
+</div>
+
+<div class="toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#s1">前置概念</a></li>
+    <li><a href="#s2">讀取參數流程</a></li>
+    <li><a href="#s3">寫入參數流程</a></li>
+    <li><a href="#s4">底層通訊協議</a>
+      <ol>
+        <li><a href="#s4-1">UART 封包格式</a></li>
+        <li><a href="#s4-2">CAN/Tool_R 封包格式</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">重試機制 retryOp</a></li>
+    <li><a href="#s6">函式對照表</a></li>
+  </ol>
+</div>
+
+<!-- S1 -->
+<h1 id="s1">前置概念</h1>
+<table>
+  <tr><th>術語</th><th>說明</th></tr>
+  <tr><td><code>hrList</code></td><td>由 <code>parameter.ini</code> 解析而來的參數陣列，每筆為 HRItem（含 address、data、name、unit 等欄位）</td></tr>
+  <tr><td><code>paraList</code></td><td>比對用的第二份資料清單（showPara 模式使用）</td></tr>
+  <tr><td><code>dataRead</code></td><td>本次「讀取參數」從裝置取回的 <code>{address, data}</code> 陣列快照</td></tr>
+  <tr><td><code>busy</code></td><td>讀寫進行中的旗標，防止並發操作</td></tr>
+  <tr><td><code>retryOp(3, fn)</code></td><td>最多重試 3 次，每次失敗間隔 15ms</td></tr>
+  <tr><td>UART 模式</td><td>直接 USB-Serial 連線；SIG（位址 0x0000~0x0003）由裝置保護，不可透過 UART 寫入</td></tr>
+  <tr><td>CAN 模式</td><td>透過 Tool_R 轉接器；所有位址皆可寫入</td></tr>
+  <tr><td>Save 指令</td><td>寫入位址 <code>0x0555=1</code>，裝置將 RAM 參數存入 Flash；讀回 <code>0x0555=0</code> 確認成功</td></tr>
+</table>
+
+<hr class="sep">
+
+<!-- S2 -->
+<h1 id="s2">讀取參數流程</h1>
+<p>對應 <span class="tag">app.js</span> 第 368～414 行，<code>btnRead</code> 事件處理。</p>
+
+<h2>流程圖</h2>
+<div class="flow-box"><pre>
+  ┌─────────────────────────────────┐
+  │        點擊【讀取參數】           │
+  └────────────────┬────────────────┘
+                   │
+          ┌────────▼────────┐
+          │ 序列埠已開啟？    │──No──▶ alert("請先開啟序列埠")
+          └────────┬────────┘
+                   │ Yes
+          ┌────────▼────────┐
+          │ hrList 已載入？  │──No──▶ alert("請先載入 parameter.ini")
+          └────────┬────────┘
+                   │ Yes
+          ┌────────▼────────┐
+          │  busy = true     │
+          │  禁用 Read/Write  │
+          │  dataRead = []   │
+          │  failed  = []    │
+          └────────┬────────┘
+                   │
+         ┌─────────▼──────────────────────────────┐
+         │ for i = 0 → hrList.length - 1           │
+         │                                          │
+         │   retryOp(3次) ─┬─ UART → readUartParam │
+         │                  └─ CAN  → readCanParam  │
+         │                                          │
+         │   ┌────────────────┬──────────────────┐  │
+         │   │ 成功 (data ≠ null)                  │  │
+         │   │  hrList[i].data = data             │  │
+         │   │  dataRead.push({addr, data})       │  │
+         │   └────────────────┘                   │  │
+         │   ┌──────────────────────────────────┐ │  │
+         │   │ 失敗 (data = null)                │ │  │
+         │   │  failed.push(addrHex)             │ │  │
+         │   │  log("xxxx 無法讀取")              │ │  │
+         │   │  failed.length ≥ 10 → break       │ │  │
+         │   └──────────────────────────────────┘ │  │
+         │                                          │
+         │   setProgress( (i+1)/total * 100 )       │
+         └─────────────────────────────────────────┘
+                   │
+          ┌────────▼──────────────┐
+          │  refreshAllDisplays()  │
+          │  updateSigDisplay()    │
+          │  updateSnDisplay()     │
+          │  updateSourceDisplay() │
+          │  setProgress(0)        │
+          └────────┬──────────────┘
+                   │
+         ┌─────────▼─────────┐
+         │ failed.length > 0？ │
+         └──┬──────────────┬──┘
+            │ Yes           │ No
+            ▼               ▼
+    log(失敗地址)      log("讀取完成")
+            │               │
+            └──────┬────────┘
+                   │
+          ┌────────▼────────┐
+          │  busy = false    │
+          │  恢復按鈕可用     │
+          └─────────────────┘
+</pre></div>
+
+<h2>步驟說明</h2>
+<table>
+  <tr><th>#</th><th>步驟</th><th>說明</th><th>協議</th></tr>
+  <tr><td>1</td><td>前置檢查</td><td>序列埠未開啟 → alert 退出；hrList 為空 → alert 退出；busy 旗標為 true → 直接返回</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>2</td><td>初始化狀態</td><td><code>busy=true</code>、清空 <code>dataRead</code> 與 <code>failed</code> 陣列、進度條歸零</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>3</td><td>逐一讀取</td><td>依 <code>hrList</code> 順序，對每個 HRItem 呼叫對應協議的讀取函式</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>4</td><td>UART 讀取</td><td><code>readUartParam(addr)</code>：clearBuffer → write(buildUartRead) → readUartFrame(1000ms) → parseUartResponse → 回傳 data 或 null</td><td><span class="badge badge-uart">UART</span></td></tr>
+  <tr><td>5</td><td>CAN 讀取</td><td><code>readCanParam(addr)</code>：clearBuffer → write(buildCanRead) → sleep(10ms) → readCanFrame(1000ms) → parseCanResponse → 驗證 ID=0x01005020 → 回傳 data[4]&lt;&lt;8|data[5] 或 null</td><td><span class="badge badge-can">CAN</span></td></tr>
+  <tr><td>6</td><td>重試機制</td><td>每個位址最多重試 3 次，失敗間隔 15ms（<code>retryOp</code>）</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>7</td><td>更新資料</td><td>成功 → 寫入 <code>hrList[i].data</code>（或 paraList）+ 推入 <code>dataRead</code>；失敗 → 加入 <code>failed[]</code></td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>8</td><td>中止條件</td><td>累計失敗 ≥ 10 個位址時自動中止，防止卡死</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>9</td><td>刷新 UI</td><td>更新所有參數顯示、SIG/SN 欄位、資料來源標示</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>10</td><td>結束</td><td><code>busy=false</code>，恢復按鈕可用；log 顯示完成訊息或失敗位址清單</td><td><span class="badge badge-both">兩者</span></td></tr>
+</table>
+
+<hr class="sep">
+
+<!-- S3 -->
+<h1 id="s3">寫入參數流程</h1>
+<p>對應 <span class="tag">app.js</span> 第 419～551 行，<code>btnWrite</code> 事件處理。</p>
+
+<div class="danger">寫入前會執行 SIG 預驗證。若裝置 SIG 與本機不符，將中止寫入，保護裝置避免載入錯誤韌體的參數。</div>
+
+<h2>流程圖</h2>
+<div class="flow-box"><pre>
+  ┌─────────────────────────────────┐
+  │        點擊【寫入參數】           │
+  └────────────────┬────────────────┘
+                   │
+          ┌────────▼────────┐
+          │ 序列埠已開啟？    │──No──▶ alert → END
+          └────────┬────────┘
+                   │ Yes
+          ┌────────▼────────┐
+          │ hrList 已載入？  │──No──▶ alert → END
+          └────────┬────────┘
+                   │ Yes
+          ┌────────▼────────┐
+          │   busy = true    │
+          └────────┬────────┘
+                   │
+  ╔══════════════════════════════════╗
+  ║   SIG 預驗證（Pre-verification） ║
+  ╚══════════════════════════════════╝
+          │
+          │ 讀取裝置 SIG0~SIG3（hrList[0..3].address）
+          │   retryOp(3次) 逐一讀取
+          │
+     ┌────▼──────────────┐
+     │ 任一讀取失敗？      │──Yes──▶ log("❌ SIGx 讀取失敗，中止寫入")
+     └────┬──────────────┘          busy=false → END
+          │ No
+     ┌────▼────────────────────────┐
+     │ decodeSig(device)            │
+     │   vs                         │
+     │ decodeSig(local hrList/para) │
+     └────┬────────────────────────┘
+          │
+     ┌────▼──────────────┐
+     │ SIG 不符？         │──Yes──▶ log("❌ SIG 不符，中止寫入")
+     └────┬──────────────┘          busy=false → END
+          │ No
+          │ log("✅ SIG 驗證通過")
+          │
+  ╔══════════════════════════════════╗
+  ║      決定寫入來源清單             ║
+  ╚══════════════════════════════════╝
+          │
+          │  UART：跳過前 4 筆（SIG 由裝置保護）
+          │  CAN ：從第 0 筆開始（startIdx=0）
+          │
+     ┌────▼──────────────────────────┐
+     │ showPara=true 且清單數量不符？  │──Yes──▶ confirm 對話框
+     └────┬──────────────────────────┘         ┌ 確定 → 使用本機 hrList
+          │ No                                  └ 取消 → 使用匯入 paraList
+          │◀───────────────────────────────────┘
+          │
+          │ 過濾寫入清單（writeItems）：
+          │   排除 production=True 的參數
+          │   排除 address ≤ 0x0020 的保護位址
+          │
+          │ log("開始寫入... 共 N 個參數")
+          │
+  ╔═════════════════════════════════════════════════╗
+  ║  for item of writeItems                          ║
+  ║                                                  ║
+  ║   retryOp(3次) ─┬─ UART → writeUartParam(addr,data) ║
+  ║                  └─ CAN  → writeCanParam(addr,data)  ║
+  ║                                                  ║
+  ║   log([ADDR] name = val  ✓/✗)                   ║
+  ║                                                  ║
+  ║   ┌─────────────────────────────────────┐        ║
+  ║   │ 失敗？→ failed.push(addr)            │        ║
+  ║   │         failed.length ≥ 10 → break  │        ║
+  ║   └─────────────────────────────────────┘        ║
+  ║                                                  ║
+  ║   setProgress(count/total)                       ║
+  ╚═════════════════════════════════════════════════╝
+          │
+  ╔══════════════════════════════════╗
+  ║          Save 指令               ║
+  ╚══════════════════════════════════╝
+          │
+          ├── UART：
+          │     write(buildUartSave)         ← 寫入 addr=0x0555, data=0x0001
+          │     sleep(1000ms)
+          │     readUartParam(0x0555)
+          │     log(0 → "Save 成功"  其他 → "Save 失敗")
+          │
+          └── CAN：
+                write(buildCanSave)          ← 同上 via CAN
+                readCanFrame → log(SAVE ok/Err)
+                write(buildCanReload)        ← 重新載入 Flash → RAM
+                readCanFrame → log(reLoad ok/Err)
+                sleep(1000ms)
+                readCanParam(0x0555)
+                log(0 → "Save 成功"  其他 → "Save 失敗")
+                   │
+          ┌────────▼────────┐
+          │  setProgress(0)  │
+          │  log(結果)       │
+          │  busy = false    │
+          └─────────────────┘
+</pre></div>
+
+<h2>步驟說明</h2>
+<table>
+  <tr><th>#</th><th>步驟</th><th>說明</th><th>協議</th></tr>
+  <tr><td>1</td><td>前置檢查</td><td>同讀取流程，busy 時直接 return</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>2</td><td>SIG 預驗證</td><td>讀取裝置 hrList[0..3].address 的值，解碼為 8 字元 SIG 字串，與本機 SIG 比對；任一步失敗則中止</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>3</td><td>確認寫入來源</td><td>UART 從 index=4 開始（跳過 SIG0~3）；CAN 從 index=0 開始（可寫 SIG）</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>4</td><td>showPara 衝突處理</td><td>showPara 模式且 paraList 與 hrList 數量不符時，彈出 confirm 讓使用者選擇寫入來源</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>5</td><td>過濾清單</td><td>排除 <code>production=True</code> 的參數（生產序號）；排除 <code>address ≤ 0x0020</code> 的系統保護位址</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>6</td><td>UART 寫入</td><td><code>writeUartParam(addr, data)</code>：clearBuffer → write(buildUartWrite) → readUartFrame(1000ms) → parseUartResponse → 回傳 true/false</td><td><span class="badge badge-uart">UART</span></td></tr>
+  <tr><td>7</td><td>CAN 寫入</td><td><code>writeCanParam(addr, data)</code>：clearBuffer → write(buildCanWrite) → sleep(10ms) → readCanFrame(1000ms) → parseCanResponse → 驗證 ID=0x01005020 且 data[1]≠0x86</td><td><span class="badge badge-can">CAN</span></td></tr>
+  <tr><td>8</td><td>逐筆 log</td><td>每個參數寫入後記錄：<code>[ADDR] 參數名 = 值  ✓/✗</code>，方便追查失敗位址</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>9</td><td>中止條件</td><td>累計失敗 ≥ 10 個位址時自動中止</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>10</td><td>Save 指令（UART）</td><td>寫入 <code>addr=0x0555, data=0x0001</code> → sleep(1000ms) → 讀回 0x0555，值=0 表示 Flash 寫入成功</td><td><span class="badge badge-uart">UART</span></td></tr>
+  <tr><td>11</td><td>Save 指令（CAN）</td><td>送出 Save → 確認 ACK → 送出 Reload（<code>data=0x0002</code>，令控制器重新從 Flash 載入） → sleep(1000ms) → 讀回 0x0555=0 確認成功</td><td><span class="badge badge-can">CAN</span></td></tr>
+  <tr><td>12</td><td>結束</td><td>進度條歸零，log 寫入結果，<code>busy=false</code></td><td><span class="badge badge-both">兩者</span></td></tr>
+</table>
+
+<hr class="sep">
+
+<!-- S4 -->
+<h1 id="s4">底層通訊協議</h1>
+
+<h2 id="s4-1">UART 封包格式</h2>
+<p>固定 12 bytes，CRC = sum of bytes[1..7]（16-bit）。對應 <span class="tag">protocol.js</span> <code>buildUartRead / buildUartWrite / parseUartResponse</code>。</p>
+
+<h3>讀取請求 TX（buildUartRead）</h3>
+<div class="pkt">
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 0</span><span class="byte-val">3A</span><br>SOF</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 1</span><span class="byte-val">2B</span><br>CMD</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 2</span><span class="byte-val">03</span><br>LEN=Read</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 3</span><span class="byte-val">04</span><br>SubCmd</div>
+  <div class="pkt-cell pkt-addr"><span class="byte-label">Byte 4</span><span class="byte-val">addr_H</span><br>位址高</div>
+  <div class="pkt-cell pkt-addr"><span class="byte-label">Byte 5</span><span class="byte-val">addr_L</span><br>位址低</div>
+  <div class="pkt-cell pkt-data"><span class="byte-label">Byte 6</span><span class="byte-val">00</span><br>資料高</div>
+  <div class="pkt-cell pkt-data"><span class="byte-label">Byte 7</span><span class="byte-val">00</span><br>資料低</div>
+  <div class="pkt-cell pkt-crc"><span class="byte-label">Byte 8</span><span class="byte-val">crc_Lo</span><br>CRC 低</div>
+  <div class="pkt-cell pkt-crc"><span class="byte-label">Byte 9</span><span class="byte-val">crc_Hi</span><br>CRC 高</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 10</span><span class="byte-val">0D</span><br>CR</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 11</span><span class="byte-val">0A</span><br>LF</div>
+</div>
+
+<h3>寫入請求 TX（buildUartWrite） — Byte 2 改為 06，Byte 6~7 填資料</h3>
+<div class="pkt">
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 0</span><span class="byte-val">3A</span><br>SOF</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 1</span><span class="byte-val">2B</span><br>CMD</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 2</span><span class="byte-val">06</span><br>LEN=Write</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 3</span><span class="byte-val">04</span><br>SubCmd</div>
+  <div class="pkt-cell pkt-addr"><span class="byte-label">Byte 4</span><span class="byte-val">addr_H</span><br>位址高</div>
+  <div class="pkt-cell pkt-addr"><span class="byte-label">Byte 5</span><span class="byte-val">addr_L</span><br>位址低</div>
+  <div class="pkt-cell pkt-data"><span class="byte-label">Byte 6</span><span class="byte-val">data_H</span><br>資料高</div>
+  <div class="pkt-cell pkt-data"><span class="byte-label">Byte 7</span><span class="byte-val">data_L</span><br>資料低</div>
+  <div class="pkt-cell pkt-crc"><span class="byte-label">Byte 8</span><span class="byte-val">crc_Lo</span><br>CRC 低</div>
+  <div class="pkt-cell pkt-crc"><span class="byte-label">Byte 9</span><span class="byte-val">crc_Hi</span><br>CRC 高</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 10</span><span class="byte-val">0D</span><br>CR</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 11</span><span class="byte-val">0A</span><br>LF</div>
+</div>
+
+<h3>回應 RX（parseUartResponse）</h3>
+<p>格式相同 12 bytes；Byte 2 = <code>0x83</code> 表示讀取失敗，<code>0x86</code> 表示寫入失敗；CRC 驗證通過後取 Byte[6]&lt;&lt;8|Byte[7] 為資料值。</p>
+
+<h3>CRC 計算</h3>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>演算法</td><td>簡單加總：<code>sum = Σ bytes[1..7]</code>（16-bit 截斷）</td></tr>
+  <tr><td>儲存</td><td>Little-Endian：<code>crc_Lo = crc &amp; 0xFF，crc_Hi = crc &gt;&gt; 8</code></td></tr>
+  <tr><td>範圍</td><td>Byte 1 ~ Byte 7（共 7 個 byte）</td></tr>
+</table>
+
+<hr class="sep">
+
+<h2 id="s4-2">CAN / Tool_R 封包格式</h2>
+<p>固定 15 bytes，前置 <code>0xFA 0x0D</code> 標頭，接 CAN ID（4B LE）、資料長度（1B）、資料（8B）。對應 <span class="tag">protocol.js</span> <code>buildToolRPacket / buildCanRead / buildCanWrite / parseCanResponse</code>。</p>
+
+<h3>通用 TX 封包結構（buildToolRPacket）</h3>
+<div class="pkt">
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 0</span><span class="byte-val">FA</span><br>SOF</div>
+  <div class="pkt-cell pkt-fixed"><span class="byte-label">Byte 1</span><span class="byte-val">0D</span><br>SOF</div>
+  <div class="pkt-cell pkt-addr"><span class="byte-label">Byte 2~5</span><span class="byte-val">CAN_ID[3:0]</span><br>ID LE 4B</div>
+  <div class="pkt-cell pkt-data"><span class="byte-label">Byte 6</span><span class="byte-val">len</span><br>資料長</div>
+  <div class="pkt-cell pkt-data"><span class="byte-label">Byte 7~14</span><span class="byte-val">Data[0..7]</span><br>8 bytes 資料</div>
+</div>
+
+<h3>讀取請求 TX（buildCanRead） — CAN ID=0x03002050</h3>
+<table>
+  <tr><th>Data[0]</th><th>Data[1]</th><th>Data[2]</th><th>Data[3]</th><th>Data[4..7]</th></tr>
+  <tr><td><code>0x01</code></td><td><code>0x03</code> (Read)</td><td>addr_H</td><td>addr_L</td><td><code>0x00</code></td></tr>
+</table>
+
+<h3>寫入請求 TX（buildCanWrite） — CAN ID=0x03002050</h3>
+<table>
+  <tr><th>Data[0]</th><th>Data[1]</th><th>Data[2]</th><th>Data[3]</th><th>Data[4]</th><th>Data[5]</th><th>Data[6..7]</th></tr>
+  <tr><td><code>0x01</code></td><td><code>0x06</code> (Write)</td><td>addr_H</td><td>addr_L</td><td>data_H</td><td>data_L</td><td><code>0x00</code></td></tr>
+</table>
+
+<h3>Save 指令 TX（buildCanSave / buildCanReload）</h3>
+<table>
+  <tr><th>指令</th><th>Data[2]</th><th>Data[3]</th><th>Data[4]</th><th>Data[5]</th><th>說明</th></tr>
+  <tr><td>Save</td><td><code>0x05</code></td><td><code>0x55</code></td><td><code>0x00</code></td><td><code>0x01</code></td><td>寫入 addr=0x0555, data=1 → 儲存 Flash</td></tr>
+  <tr><td>Reload</td><td><code>0x05</code></td><td><code>0x55</code></td><td><code>0x00</code></td><td><code>0x02</code></td><td>寫入 addr=0x0555, data=2 → Flash 重載 RAM</td></tr>
+</table>
+
+<h3>回應 RX 解析（parseCanResponse）</h3>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>有效 ID（讀/寫回應）</td><td><code>0x01005020</code>（LE）</td></tr>
+  <tr><td>成功讀取</td><td>data[1] ≠ 0x83；資料值 = <code>(data[4] &lt;&lt; 8) | data[5]</code></td></tr>
+  <tr><td>成功寫入</td><td>ID = 0x01005020 且 data[1] ≠ 0x86</td></tr>
+  <tr><td>錯誤碼 0x83</td><td>讀取失敗（位址不存在）</td></tr>
+  <tr><td>錯誤碼 0x86</td><td>寫入失敗</td></tr>
+</table>
+
+<div class="note">CAN 模式每次 TX 後需等待 <strong>10ms</strong>（<code>sleep(10)</code>）再讀取回應，留出 Tool_R 轉接器處理時間。</div>
+
+<hr class="sep">
+
+<!-- S5 -->
+<h1 id="s5">重試機制 retryOp</h1>
+<p>對應 <span class="tag">app.js</span> 第 596～608 行。</p>
+
+<div class="flow-box"><pre>
+  retryOp(maxRetries=3, fn)
+
+    for i = 0 → maxRetries-1
+      │
+      ▼
+    try { result = await fn() }
+      │
+      ├── result ≠ null 且 ≠ false → return result（成功）
+      │
+      └── result = null / false → continue retry
+             │
+             sleep(15ms)
+             │
+    (所有重試均失敗)
+      │
+      ▼
+    return null
+</pre></div>
+
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>重試次數</td><td>最多 3 次（maxRetries=3）</td></tr>
+  <tr><td>重試間隔</td><td>15ms（<code>sleep(15)</code>）</td></tr>
+  <tr><td>停止條件</td><td>成功（回傳非 null/false）或 3 次全失敗</td></tr>
+  <tr><td>全部失敗回傳</td><td><code>null</code>，呼叫端記入 failed 陣列</td></tr>
+</table>
+
+<hr class="sep">
+
+<!-- S6 -->
+<h1 id="s6">函式對照表</h1>
+<table>
+  <tr><th>函式</th><th>所在檔案</th><th>說明</th></tr>
+  <tr><td><code>readUartParam(addr)</code></td><td>app.js:556</td><td>UART 單一位址讀取（clearBuf → write → readFrame → parse）</td></tr>
+  <tr><td><code>readCanParam(addr)</code></td><td>app.js:565</td><td>CAN 單一位址讀取（clearBuf → write → sleep → readFrame → parse）</td></tr>
+  <tr><td><code>writeUartParam(addr,data)</code></td><td>app.js:577</td><td>UART 單一位址寫入，回傳 true/false</td></tr>
+  <tr><td><code>writeCanParam(addr,data)</code></td><td>app.js:586</td><td>CAN 單一位址寫入，回傳 true/false</td></tr>
+  <tr><td><code>retryOp(n, fn)</code></td><td>app.js:596</td><td>最多 n 次重試，失敗間隔 15ms</td></tr>
+  <tr><td><code>buildUartRead(addr)</code></td><td>protocol.js:20</td><td>建立 12-byte UART 讀取封包</td></tr>
+  <tr><td><code>buildUartWrite(addr,data)</code></td><td>protocol.js:32</td><td>建立 12-byte UART 寫入封包</td></tr>
+  <tr><td><code>buildUartSave()</code></td><td>protocol.js:44</td><td>建立 UART Save 指令封包（addr=0x0555, data=1）</td></tr>
+  <tr><td><code>parseUartResponse(bytes)</code></td><td>protocol.js:58</td><td>解析 UART 回應，驗 CRC，回傳 {address, data} 或 {error}</td></tr>
+  <tr><td><code>buildToolRPacket(id, data)</code></td><td>protocol.js:75</td><td>建立 15-byte Tool_R/CAN 封包</td></tr>
+  <tr><td><code>buildCanRead(addr)</code></td><td>protocol.js:87</td><td>建立 CAN 讀取封包（ID=0x03002050）</td></tr>
+  <tr><td><code>buildCanWrite(addr,data)</code></td><td>protocol.js:92</td><td>建立 CAN 寫入封包</td></tr>
+  <tr><td><code>buildCanSave()</code></td><td>protocol.js:97</td><td>建立 CAN Save 指令封包</td></tr>
+  <tr><td><code>buildCanReload()</code></td><td>protocol.js:102</td><td>建立 CAN Reload 指令封包</td></tr>
+  <tr><td><code>parseCanResponse(bytes)</code></td><td>protocol.js:108</td><td>解析 13-byte CAN 回應，回傳 {id, len, data}</td></tr>
+  <tr><td><code>SerialManager.readUartFrame(ms)</code></td><td>serial.js:83</td><td>等待 0x3A...0x0D0A 完整 UART 幀</td></tr>
+  <tr><td><code>SerialManager.readCanFrame(ms)</code></td><td>serial.js:142</td><td>等待 0xFA0D + 13-byte CAN 幀</td></tr>
+  <tr><td><code>SerialManager.clearBuffer()</code></td><td>serial.js:72</td><td>丟棄接收緩衝區中所有未讀資料</td></tr>
+</table>
+
+<div style="margin-top:48px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
+  Endex eBike Tool — 讀取/寫入參數流程說明 v1.4.5 &nbsp;｜&nbsp; 2026-07-02
+</div>
+
+</div>
+</body>
+</html>

@@ -173,7 +173,7 @@ body {
   font-size: 15px;
   width: 90px;
 }
-.ab-field-input.ab-sn { width: 130px; }
+.ab-field-input.ab-sn { width: 160px; }
 .ab-field-input:focus { outline: none; border-color: var(--accent); }
 .ab-field-input:disabled { opacity: .4; }
 .actionbar-sep {
