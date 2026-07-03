@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.7';
+const APP_VERSION = 'v1.4.8';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -154,6 +154,8 @@ function checkSigProtocolMatch() {
   const match   = proto === sigProto;
   log(`設定${proto}  匯入 "${sig}"  與通訊${match ? '相符' : '不符'}!`);
 }
+
+document.getElementById('selProtocol').addEventListener('change', checkSigProtocolMatch);
 
 // ─────────────────────────────────────────────────────────────
 //  INI file loading  (auto + manual + localStorage cache)
