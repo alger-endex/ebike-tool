@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.8';
+const APP_VERSION = 'v1.4.9';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -332,8 +332,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
     if (!state.showPara) { state.fileName1 = file.name; state.hrListSource   = 'import'; }
     else                 { state.fileName2 = file.name; state.paraListSource = 'import'; }
 
-    document.getElementById('showParaLabel').textContent =
-      state.showPara ? state.fileName2 : state.fileName1;
+    updateShowParaLabel();
 
     if (missing.length) log('缺少地址: ' + missing.join(', '));
     if (extra.length)   log('多餘地址: ' + extra.join(', '));
@@ -373,8 +372,14 @@ document.getElementById('btnExport').addEventListener('click', async () => {
 });
 
 // Show-Para checkbox
+function updateShowParaLabel() {
+  const name = state.showPara ? state.fileName2 : state.fileName1;
+  document.getElementById('showParaLabel').textContent = name !== 'N/A' ? name : '顯示比較參數';
+}
+
 document.getElementById('chkShowPara').addEventListener('change', (e) => {
   state.showPara = e.target.checked;
+  updateShowParaLabel();
   refreshAllDisplays(state);
   updateSigDisplay();
   updateSnDisplay();
