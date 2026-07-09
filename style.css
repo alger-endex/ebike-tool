@@ -272,6 +272,9 @@ body {
   z-index: 10;
   padding: 0;
 }
+body.log-collapsed .sb-toggle {
+  bottom: calc(24px + 8px);  /* 狀態記錄收合時，statusbar 只剩 24px */
+}
 .sb-toggle:hover { color: var(--accent); }
 .sb-section {
   padding: 6px 10px;
@@ -554,6 +557,13 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+}
+.statusbar.collapsed {
+  height: 24px;  /* 只留 log-tabbar */
+}
+.statusbar.collapsed .progress-track,
+.statusbar.collapsed .status-log {
+  display: none;
 }
 .progress-track {
   height: 20px;
@@ -1074,6 +1084,7 @@ body {
 .btn-tiny:hover { background: var(--border); color: var(--text); }
 .btn-tiny.debug-on  { border-color: var(--success); color: var(--success); }
 .btn-tiny.debug-off { border-color: var(--border);  color: var(--text-dim); }
+#btnLogToggle { min-width: 28px; text-align: center; }
 
 /* ── Debug panel ── */
 .debug-panel {

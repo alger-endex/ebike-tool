@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.9';
+const APP_VERSION = 'v1.4.10';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -1198,6 +1198,24 @@ document.getElementById('btnClearLog').addEventListener('click', () => {
     document.getElementById('statusLog').value = '';
   }
 });
+
+// ── 狀態記錄區塊 收合切換 ──
+(function () {
+  const bar   = document.querySelector('.statusbar');
+  const btn   = document.getElementById('btnLogToggle');
+  const LS_KEY = 'endex_statuslog_collapsed';
+
+  function setCollapsed(collapsed) {
+    bar.classList.toggle('collapsed', collapsed);
+    document.body.classList.toggle('log-collapsed', collapsed);
+    btn.textContent = collapsed ? '▴' : '▾';
+    btn.title = collapsed ? '展開狀態記錄區塊' : '收合狀態記錄區塊';
+    localStorage.setItem(LS_KEY, collapsed ? '1' : '');
+  }
+
+  setCollapsed(!!localStorage.getItem(LS_KEY));
+  btn.addEventListener('click', () => setCollapsed(!bar.classList.contains('collapsed')));
+})();
 
 // ─────────────────────────────────────────────────────────────
 //  Driver Status — real-time CAN monitoring
