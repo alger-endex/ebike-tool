@@ -130,6 +130,8 @@
     <section class="sb-section">
       <h4 class="sb-title">裝置監控</h4>
       <button id="btnDriverStatus" class="btn btn-block btn-monitor" title="即時監控裝置狀態 (CAN only)">⚡ Driver Status</button>
+      <button id="btnCalibrate" class="btn btn-block btn-monitor" title="馬達校正流程 (CAN only)">🔧 馬達校正</button>
+      <button id="btnCalTrigger" class="btn btn-block btn-monitor" title="單獨送出觸發訊框 CAN ID 0x141030FF，不執行校正握手與輪詢流程 (CAN only)">🔔 CAN 通訊測試</button>
     </section>
 
     <section class="sb-section" id="burnSection">
@@ -401,6 +403,30 @@
       <button id="btnDrvLogExport" class="btn btn-action" disabled>⬇ 下載電流 Log (.csv)</button>
       <span id="drvLogCount" class="drv-log-count">0 筆</span>
       <button class="btn" data-close="modalDriverStatus">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     Motor Calibration modal
+     ══════════════════════════════════════════════════════ -->
+<div id="modalCalibrate" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span>馬達校正 <span class="drv-can-badge">CAN only</span></span>
+      <button class="modal-x" data-close="modalCalibrate">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="cal-desc">啟動控制器的馬達校正程序，過程約需 30～40 秒，進行中請勿關閉序列埠或拔除連線。</p>
+      <button id="btnCalStart" class="btn btn-action btn-block">▶ 開始校正</button>
+      <div class="cal-progress-wrap">
+        <div id="calProgressBar" class="cal-progress-fill"></div>
+        <span id="calProgressLabel" class="cal-progress-label"></span>
+      </div>
+      <textarea id="calLog" class="cal-log" readonly></textarea>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn" data-close="modalCalibrate">關閉</button>
     </div>
   </div>
 </div>

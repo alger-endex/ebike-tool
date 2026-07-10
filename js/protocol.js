@@ -136,6 +136,35 @@ const DRV_RX_ASSIST   = 0x10215030;
 const DRV_RX_DISTANCE = 0x10225030;
 
 // ─────────────────────────────────────────────────────────────
+//  Motor Calibration  (CAN only)
+// ─────────────────────────────────────────────────────────────
+
+const CAL_ACK_ID    = 0x010550F0;   // reply to CAL start
+const CAL_STATUS_ID = 0x000550F0;   // reply to CAL progress poll
+
+// Shared trigger payload: [0,0,0,0x5A,0,0,0,0]
+function buildCalEnableCmd() { return buildToolRPacket(0x141030FF, [0x00, 0x00, 0x00, 0x5A, 0, 0, 0, 0]); }
+function buildCalStartCmd()  { return buildToolRPacket(0x0305F050, [0x00, 0x00, 0x00, 0x5A, 0, 0, 0, 0]); }
+function buildCalPollCmd()   { return buildToolRPacket(0x0205F050, []); }
+
+/** Parse the ACK to the start command. r = parseCanResponse(frame). Returns 'ok' | 'busy' | null (id mismatch). */
+function parseCalAck(r) {
+  if (!r || r.id !== CAL_ACK_ID) return null;
+  return r.data[0] === 1 ? 'ok' : 'busy';
+}
+
+/** Parse a progress-poll response. Returns { error, step, done, success } or null (id mismatch). */
+function parseCalStatus(r) {
+  if (!r || r.id !== CAL_STATUS_ID) return null;
+  return {
+    error:   r.data[6],
+    step:    r.data[7],
+    done:    r.data[0] === 1,
+    success: r.data[1] === 0,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 //  SIG utilities
 // ─────────────────────────────────────────────────────────────
 

@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.10';
+const APP_VERSION = 'v1.4.11';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -1386,6 +1386,134 @@ document.getElementById('btnDrvLogExport').addEventListener('click', () => {
   downloadText(csv, 'drive_current_' + ts + '.csv');
   log('電流 Log 已下載，共 ' + drvCurrentLog.length + ' 筆');
 });
+
+// ─────────────────────────────────────────────────────────────
+//  Motor Calibration  (CAN only)
+// ─────────────────────────────────────────────────────────────
+let calRunning = false;
+
+document.getElementById('btnCalibrate').addEventListener('click', () => {
+  if (!state.isCAN) { alert('馬達校正僅支援 CAN 模式\n請先選擇 CAN 並開啟序列埠'); return; }
+  if (!state.serial.isOpen) { alert('請先開啟序列埠'); return; }
+  document.getElementById('modalCalibrate').style.display = 'flex';
+});
+
+// Standalone sidebar action — sends just the CAN ID 0x141030FF /
+// [00,00,00,5A,00,00,00,00] frame on its own, independent of the automatic
+// enable→start→poll flow in runCalibration() below.
+document.getElementById('btnCalTrigger').addEventListener('click', async () => {
+  if (!state.isCAN) { alert('僅支援 CAN 模式\n請先選擇 CAN 並開啟序列埠'); return; }
+  if (!state.serial.isOpen) { alert('請先開啟序列埠'); return; }
+  try {
+    await state.serial.write(buildCalEnableCmd());
+    log('已送出觸發訊框 (CAN ID 0x141030FF)');
+  } catch (e) {
+    log('觸發訊框送出失敗: ' + e.message);
+  }
+});
+
+document.querySelectorAll('[data-close="modalCalibrate"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('modalCalibrate').style.display = 'none';
+  });
+});
+
+document.getElementById('btnCalStart').addEventListener('click', runCalibration);
+
+function setCalProgress(pct, label = '') {
+  document.getElementById('calProgressBar').style.width   = pct + '%';
+  document.getElementById('calProgressLabel').textContent = label;
+}
+
+// Writes to the calibration modal's own log panel (visible while the modal
+// is open) as well as the main status log (kept for history/consistency).
+function calLog(msg) {
+  const el = document.getElementById('calLog');
+  el.value += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+  log(msg);
+}
+
+async function runCalibration() {
+  if (calRunning) return;
+  document.getElementById('calLog').value = '';
+  if (drvMonitorActive) { calLog('請先停止 Driver Status 監控再進行校正'); return; }
+  if (!state.serial.isOpen) { calLog('序列埠未開啟'); return; }
+
+  calRunning = true;
+  const btn = document.getElementById('btnCalStart');
+  btn.disabled = true;
+  btn.textContent = '校正中...';
+  setCalProgress(0, '');
+  calLog('校正開始 ==>');
+
+  try {
+    // ── 1. Enable trigger ──
+    await state.serial.write(buildCalEnableCmd());
+    await sleep(500);
+
+    // ── 2. Start command ──
+    state.serial.clearBuffer();
+    await state.serial.write(buildCalStartCmd());
+    await sleep(5);
+
+    // Other CAN traffic (e.g. a straggler frame) can arrive before the real
+    // ACK — keep reading instead of aborting on the first mismatch, and only
+    // give up after 10 consecutive timeouts/mismatches.
+    let ack = null;
+    let ackErrCnt = 0;
+    while (ackErrCnt < 10) {
+      const ackFrame = await state.serial.readCanFrame(1000);
+      const ackResp  = ackFrame ? parseCanResponse(ackFrame) : null;
+      if (!ackResp) { calLog('接收逾時，無回應'); ackErrCnt++; continue; }
+      ack = parseCalAck(ackResp);
+      if (ack === null) {
+        calLog('ACK ID 錯誤 0x' + ackResp.id.toString(16) + '，繼續等待...');
+        ackErrCnt++;
+        continue;
+      }
+      break;
+    }
+    if (ack === null) { calLog('連續 ' + ackErrCnt + ' 次未收到正確 ACK，中止校正'); return; }
+    if (ack === 'busy') { calLog('驅動器忙碌中，校正未啟動'); return; }
+    calLog('驅動器已回應，開始輪詢校正進度...');
+
+    // ── 3. Poll progress (up to 60 tries, ~590ms interval) ──
+    // Same tolerance as the ACK wait above: an unrelated/mismatched frame
+    // doesn't abort the poll — only 5 *consecutive* timeouts/mismatches do.
+    let errorCnt = 0;
+    for (let i = 0; i < 60; i++) {
+      await sleep(590);
+      state.serial.clearBuffer();
+      await state.serial.write(buildCalPollCmd());
+      await sleep(5);
+      const frame  = await state.serial.readCanFrame(1000);
+      const resp   = frame ? parseCanResponse(frame) : null;
+      const status = resp ? parseCalStatus(resp) : null;
+
+      if (!status) {
+        errorCnt++;
+        calLog(resp ? ('ACK ID 錯誤 0x' + resp.id.toString(16)) : '接收逾時');
+        if (errorCnt >= 5) { calLog('連續 ' + errorCnt + ' 次未收到正確回應，中止校正'); break; }
+        continue;
+      }
+      errorCnt = 0;
+      if (status.error) calLog('錯誤碼 0x' + status.error.toString(16));
+      setCalProgress((status.step / 12 * 100).toFixed(0), `Process ${status.step} / 12`);
+      if (status.done) {
+        calLog(status.success ? '校正成功' : '校正失敗');
+        break;
+      }
+    }
+  } catch (e) {
+    calLog('校正發生錯誤: ' + e.message);
+  } finally {
+    calLog('校正結束');
+    calRunning = false;
+    btn.disabled = false;
+    btn.textContent = '▶ 開始校正';
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 //  Burn / Firmware Update

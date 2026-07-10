@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.4.10</title>
+<title>Endex eBike Tool — 操作說明書 v1.4.11</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.4.10</div>
+  <div class="cover-ver">操作說明書 v1.4.11</div>
   <div class="cover-date">2026-07-09</div>
 </div>
 
@@ -708,6 +708,16 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.4.11</strong></td>
+      <td>2026-07-10</td>
+      <td>
+        <ul>
+          <li>側欄「裝置監控」新增「馬達校正」功能（CAN only），對應桌面版工具的校正流程：送出啟動觸發與校正指令後，每約 590ms 輪詢一次進度，顯示 Process X / 12 進度條與錯誤碼，最終回報校正成功或失敗；過程訊息即時顯示於校正視窗內建的記錄區塊，無需切換到狀態記錄分頁</li>
+          <li>側欄「裝置監控」區塊新增「CAN 通訊測試」按鈕（CAN only），可單獨送出 CAN ID 0x141030FF（payload 00 00 00 5A 00 00 00 00）觸發訊框，不會接著執行後續校正握手與輪詢流程，方便單獨測試此訊框</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.4.10</strong></td>
       <td>2026-07-09</td>
       <td>
@@ -836,7 +846,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.4.10 &nbsp;｜&nbsp; 2026-07-09
+  Endex eBike Tool 操作說明書 v1.4.11 &nbsp;｜&nbsp; 2026-07-10
 </div>
 
 </div>
