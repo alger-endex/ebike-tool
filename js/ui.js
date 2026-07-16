@@ -51,7 +51,7 @@ function generateTabs(state, onParamChange, onSetBitClick) {
 
     let col = null;
     visibleItems.forEach(function(o, visIdx) {
-      if (visIdx % 8 === 0) {
+      if (visIdx % 9 === 0) {
         col = document.createElement('div');
         col.className = 'param-col';
         panel.appendChild(col);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.4.11</title>
+<title>Endex eBike Tool — 操作說明書 v1.4.12</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.4.11</div>
-  <div class="cover-date">2026-07-09</div>
+  <div class="cover-ver">操作說明書 v1.4.12</div>
+  <div class="cover-date">2026-07-16</div>
 </div>
 
 <!-- TOC -->
@@ -708,6 +708,16 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.4.12</strong></td>
+      <td>2026-07-16</td>
+      <td>
+        <ul>
+          <li>依 ebike_g431 韌體端維護的 parameter_map.md（v3.09 現況）校正 parameter.ini：新增 0x0416 Min Assist Speed 參數；修正 0x0400 Sensor Type、0x02A0 Hardware Parameter 1、0x02A1 FW parameter、0x0107 Motor Gear Ratio、0x0500 Throttle Enable 等欄位的 tooltip 說明與現行韌體語意不符之處</li>
+          <li>修正 Assist Para 分頁參數列自動換欄邏輯：原本每 8 列換一欄，導致 Torque/Power/Speed Level（各 9 段一組）被切斷到下一欄，改為每 9 列換欄使各組完整顯示在同一欄</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.4.11</strong></td>
       <td>2026-07-10</td>
       <td>
@@ -846,7 +856,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.4.11 &nbsp;｜&nbsp; 2026-07-10
+  Endex eBike Tool 操作說明書 v1.4.12 &nbsp;｜&nbsp; 2026-07-16
 </div>
 
 </div>
