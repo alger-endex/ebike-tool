@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.4.12</title>
+<title>Endex eBike Tool — 操作說明書 v1.4.13</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.4.12</div>
+  <div class="cover-ver">操作說明書 v1.4.13</div>
   <div class="cover-date">2026-07-16</div>
 </div>
 
@@ -198,11 +198,11 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <h3>第一行（常駐）</h3>
 <table>
   <tr><th>按鈕</th><th>功能</th></tr>
-  <tr><td>匯入 Config</td><td>從本機選擇 CONFIG.txt 載入至目前資料組（主或副）</td></tr>
+  <tr><td>匯入 Config</td><td>從本機選擇 CONFIG.txt 載入至目前資料組（主或副），完成後彈出小視窗顯示匯入筆數與缺少/多餘地址摘要</td></tr>
   <tr><td>匯出 Config</td><td>將目前資料組所有參數值匯出為 CONFIG.txt 並下載</td></tr>
   <tr><td>⇄ 比對差異</td><td>開啟差異比對視窗（需至少兩組資料）</td></tr>
-  <tr><td>讀取參數</td><td>逐一從裝置讀回所有參數值，更新頁籤顯示</td></tr>
-  <tr><td>寫入參數</td><td>將 UI 上的參數值寫入裝置並執行 SAVE（CAN 另執行 RELOAD）</td></tr>
+  <tr><td>讀取參數</td><td>逐一從裝置讀回所有參數值，更新頁籤顯示，完成後彈出小視窗顯示成功/失敗筆數摘要</td></tr>
+  <tr><td>寫入參數</td><td>將 UI 上的參數值寫入裝置並執行 SAVE（CAN 另執行 RELOAD），完成後彈出小視窗顯示成功/失敗筆數與 Save 結果摘要</td></tr>
 </table>
 <h3>第二行（工程模式顯示，<kbd>Ctrl</kbd>+<kbd>E</kbd> 啟用）</h3>
 <table>
@@ -708,6 +708,15 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.4.13</strong></td>
+      <td>2026-07-27</td>
+      <td>
+        <ul>
+          <li>「讀取參數」「寫入參數」「匯入 Config」執行完成後，新增小視窗彈出提醒並顯示結果摘要（成功/失敗筆數、失敗位址列表；寫入另顯示 Save 結果；匯入另顯示缺少/多餘地址），毋須切換到狀態記錄分頁查看</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.4.12</strong></td>
       <td>2026-07-16</td>
       <td>
@@ -856,7 +865,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.4.12 &nbsp;｜&nbsp; 2026-07-16
+  Endex eBike Tool 操作說明書 v1.4.13 &nbsp;｜&nbsp; 2026-07-27
 </div>
 
 </div>

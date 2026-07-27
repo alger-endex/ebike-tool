@@ -438,3 +438,24 @@ function initConfigModal() {
     });
   });
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Read/Write Result modal
+// ─────────────────────────────────────────────────────────────
+
+function showResultModal(title, ok, lines) {
+  const hdr = document.getElementById('modalResult').querySelector('.modal-hdr');
+  document.getElementById('resultTitle').textContent = (ok ? '✅ ' : '⚠️ ') + title;
+  hdr.classList.toggle('result-ok',   ok);
+  hdr.classList.toggle('result-fail', !ok);
+  document.getElementById('resultBody').textContent = lines.join('\n');
+  document.getElementById('modalResult').style.display = 'flex';
+}
+
+function initResultModal() {
+  document.querySelectorAll('[data-close="modalResult"]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.getElementById('modalResult').style.display = 'none';
+    });
+  });
+}

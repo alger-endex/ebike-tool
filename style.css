@@ -1233,3 +1233,15 @@ body.log-collapsed .sb-toggle {
   font-size: 12px;
   outline: none;
 }
+
+/* ── Read/Write Result modal ── */
+#modalResult .modal-hdr.result-ok   { color: var(--success); }
+#modalResult .modal-hdr.result-fail { color: var(--danger); }
+.result-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  min-width: 280px;
+}

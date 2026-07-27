@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.12';
+const APP_VERSION = 'v1.4.13';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -343,6 +343,17 @@ document.getElementById('btnImport').addEventListener('click', () => {
     updateSnDisplay();
     updateSourceDisplay();
     checkSigProtocolMatch();
+
+    const importLines = [
+      '檔名: ' + file.name,
+      '匯入筆數: ' + entries.length + ' 個',
+      '缺少地址: ' + missing.length + ' 個',
+      '多餘地址: ' + extra.length + ' 個',
+    ];
+    if (missing.length) importLines.push('缺少地址列表: ' + missing.join(', '));
+    if (extra.length)   importLines.push('多餘地址列表: ' + extra.join(', '));
+    const importOk = missing.length === 0 && extra.length === 0;
+    showResultModal('匯入' + (importOk ? '完成' : '完成（有差異）'), importOk, importLines);
   });
 });
 
@@ -433,6 +444,15 @@ document.getElementById('btnRead').addEventListener('click', async () => {
   if (!state.showPara) state.hrListSource   = 'read';
   else                 state.paraListSource = 'read';
   updateSourceDisplay();
+
+  const readLines = [
+    '共 ' + total + ' 個參數',
+    '成功: ' + (total - failed.length) + ' 個',
+    '失敗: ' + failed.length + ' 個',
+  ];
+  if (failed.length) readLines.push('失敗位址: ' + failed.join(', '));
+  showResultModal('讀取' + (failed.length ? '完成（部分失敗）' : '完成'), failed.length === 0, readLines);
+
   setBusy(false);
 });
 
@@ -536,6 +556,7 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
   }
 
   // Save command
+  let saveOk = null;
   try {
     if (state.isCAN) {
       state.serial.clearBuffer();
@@ -554,14 +575,16 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
 
       await sleep(1000);
       const saveCheck = await readCanParam(0x0555);
-      log(saveCheck === 0 ? 'Save 成功' : 'Save 失敗');
+      saveOk = saveCheck === 0;
+      log(saveOk ? 'Save 成功' : 'Save 失敗');
     } else {
       state.serial.clearBuffer();
       await state.serial.write(buildUartSave());
 
       await sleep(1000);
       const saveCheck = await readUartParam(0x0555);
-      log(saveCheck === 0 ? 'Save 成功' : 'Save 失敗');
+      saveOk = saveCheck === 0;
+      log(saveOk ? 'Save 成功' : 'Save 失敗');
     }
   } catch (e) {
     log('儲存指令異常: ' + e.message);
@@ -570,6 +593,16 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
   setProgress(0);
   if (failed.length) log('寫入失敗: ' + failed.join(', '));
   else               log('寫入完成');
+
+  const writeLines = [
+    '共 ' + total + ' 個參數',
+    '成功: ' + (total - failed.length) + ' 個',
+    '失敗: ' + failed.length + ' 個',
+  ];
+  if (failed.length) writeLines.push('失敗位址: ' + failed.join(', '));
+  writeLines.push('儲存(Save): ' + (saveOk === null ? '未執行/異常' : (saveOk ? '成功' : '失敗')));
+  showResultModal('寫入' + (failed.length || !saveOk ? '完成（部分失敗）' : '完成'), failed.length === 0 && saveOk === true, writeLines);
+
   setBusy(false);
 });
 
@@ -1996,6 +2029,7 @@ document.getElementById('btnBurn').addEventListener('click', async () => {
 // ─────────────────────────────────────────────────────────────
 initSetbitModal();
 initConfigModal();
+initResultModal();
 
 // Show version
 document.getElementById('appVersion').textContent = APP_VERSION;
