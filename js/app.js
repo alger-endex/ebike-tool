@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.4.13';
+const APP_VERSION = 'v1.5.00';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -163,10 +163,29 @@ document.getElementById('selProtocol').addEventListener('change', checkSigProtoc
 const LS_PAGE  = 'endex_page_ini';
 const LS_PARAM = 'endex_parameter_ini';
 const LS_PARAM_NAME = 'endex_parameter_ini_name';
+const LS_MODEL = 'endex_model';
+
+/** Model → parameter.ini filename. '' = standard CAN line (ENEBDV02/12). */
+const MODEL_FILES = {
+  '':         'parameter.ini',
+  'ENEBDV04': 'parameter_ENEBDV04.ini',
+};
+
+/** Model → expected PRODUCT_SPECIFIED_ID string(s), decoded from SIG0-3 (0x0000-0x0003). */
+const MODEL_PRODUCT_IDS = {
+  '':         ['ENEBDV02', 'ENEBDV12'],
+  'ENEBDV04': ['ENEBDV04'],
+};
+
+function currentModel() {
+  return document.getElementById('selModel')?.value || '';
+}
+function lsParamKey(model)     { return model ? `${LS_PARAM}_${model}`      : LS_PARAM; }
+function lsParamNameKey(model) { return model ? `${LS_PARAM_NAME}_${model}` : LS_PARAM_NAME; }
 
 /** Update the "currently loaded parameter.ini" filename display + cache. */
-function setParamIniName(name) {
-  localStorage.setItem(LS_PARAM_NAME, name);
+function setParamIniName(name, model = currentModel()) {
+  localStorage.setItem(lsParamNameKey(model), name);
   const el = document.getElementById('paramIniName');
   if (el) el.textContent = '📄 ' + name;
 }
@@ -179,6 +198,8 @@ function setParamIniName(name) {
 async function autoLoadIni() {
   let pageText  = null;
   let paramText = null;
+  const model     = currentModel();
+  const paramFile = MODEL_FILES[model] || MODEL_FILES[''];
 
   // ── Step 1: fetch from same directory ──
   try {
@@ -186,14 +207,21 @@ async function autoLoadIni() {
     if (r.ok) { pageText = await r.text(); }
   } catch {}
   try {
-    const r = await fetch('./parameter.ini');
+    const r = await fetch('./' + paramFile);
     if (r.ok) { paramText = await r.text(); }
   } catch {}
   const paramFromFetch = paramText !== null;
 
   // ── Step 2: localStorage cache ──
   if (!pageText)  pageText  = localStorage.getItem(LS_PAGE);
-  if (!paramText) paramText = localStorage.getItem(LS_PARAM);
+  if (!paramText) paramText = localStorage.getItem(lsParamKey(model));
+
+  // ── Step 2b: embedded fallback (works under file:// with no prior cache) ──
+  let paramFromEmbedded = false;
+  if (!paramText && typeof EMBEDDED_PARAM_INI !== 'undefined' && EMBEDDED_PARAM_INI[model]) {
+    paramText = EMBEDDED_PARAM_INI[model];
+    paramFromEmbedded = true;
+  }
 
   // ── Step 3: apply ──
   const fromCache = !pageText?.startsWith('\n') && localStorage.getItem(LS_PAGE) === pageText;
@@ -203,16 +231,19 @@ async function autoLoadIni() {
   }
   if (paramText) {
     state.hrList = parseParameterIni(paramText);
-    const paramName = paramFromFetch ? 'parameter.ini' : (localStorage.getItem(LS_PARAM_NAME) || 'parameter.ini');
-    setParamIniName(paramName);
-    log('parameter.ini 載入 (' + (paramFromFetch ? '檔案' : '快取') + ': ' + paramName + ') → ' + state.hrList.length + ' 個參數');
-  }
-  if (state.tabList.length && state.hrList.length) {
-    rebuildTabs();
-    updateAutoLoadStatus(true);
+    const paramName = paramFromFetch ? paramFile : (localStorage.getItem(lsParamNameKey(model)) || paramFile);
+    setParamIniName(paramName, model);
+    const src = paramFromFetch ? '檔案' : (paramFromEmbedded ? '內嵌預設值' : '快取');
+    log('parameter.ini 載入 (' + src + ': ' + paramName + ') → ' + state.hrList.length + ' 個參數');
   } else {
-    updateAutoLoadStatus(false);
+    // Fetch failed (e.g. opened via file://) AND this model has no cache yet —
+    // don't silently keep the previous model's stale hrList on screen.
+    state.hrList = [];
+    setParamIniName('(未載入)', model);
+    log('⚠ 找不到 ' + paramFile + '（伺服器無回應且此機種尚無快取）。請按「手動選 parameter.ini」選擇 ' + paramFile + ' 一次以建立快取。');
   }
+  rebuildTabs();
+  updateAutoLoadStatus(state.tabList.length > 0 && state.hrList.length > 0);
 }
 
 function updateAutoLoadStatus(ok) {
@@ -253,7 +284,7 @@ document.getElementById('btnLoadParamIni').addEventListener('click', async () =>
     }
     const file = await handle.getFile();
     const text = await file.text();
-    localStorage.setItem(LS_PARAM, text);
+    localStorage.setItem(lsParamKey(currentModel()), text);
     state.hrList = parseParameterIni(text);
     state.paramFileHandle = handle;
     setParamIniName(file.name);
@@ -263,7 +294,7 @@ document.getElementById('btnLoadParamIni').addEventListener('click', async () =>
   } else {
     pickFile('.ini,.txt', async (file) => {
       const text = await file.text();
-      localStorage.setItem(LS_PARAM, text);
+      localStorage.setItem(lsParamKey(currentModel()), text);
       state.hrList = parseParameterIni(text);
       setParamIniName(file.name);
       log('parameter.ini 載入成功 → ' + state.hrList.length + ' 個參數  [已存入快取: ' + file.name + ']');
@@ -280,9 +311,10 @@ document.getElementById('btnReloadIni').addEventListener('click', () => {
 });
 
 document.getElementById('btnClearIniCache').addEventListener('click', () => {
+  const model = currentModel();
   localStorage.removeItem(LS_PAGE);
-  localStorage.removeItem(LS_PARAM);
-  localStorage.removeItem(LS_PARAM_NAME);
+  localStorage.removeItem(lsParamKey(model));
+  localStorage.removeItem(lsParamNameKey(model));
   state.tabList = [];
   state.hrList  = [];
   const el = document.getElementById('paramIniName');
@@ -344,6 +376,24 @@ document.getElementById('btnImport').addEventListener('click', () => {
     updateSourceDisplay();
     checkSigProtocolMatch();
 
+    // ── 機種比對：匯入檔案的 SIG0-3 (PRODUCT_SPECIFIED_ID) 是否與目前選擇的機種一致 ──
+    const sig0to3Missing = ['0000', '0001', '0002', '0003'].some(a => missing.includes(a));
+    const model = currentModel();
+    let modelCheckLine = null;
+    if (!sig0to3Missing) {
+      const readSig     = decodeSig(state.showPara ? state.paraList : state.hrList);
+      const expectedIds = MODEL_PRODUCT_IDS[model] || [];
+      const modelOk      = expectedIds.length === 0 || expectedIds.includes(readSig);
+      const modelLabel   = model ? (model + ' (Schaca)') : '標準 (ENEBDV02/12)';
+      if (modelOk) {
+        log('✓ 機種比對：匯入檔案 PRODUCT_SPECIFIED_ID = ' + readSig + '，與目前選擇機種相符');
+        modelCheckLine = '機種比對: ' + readSig + ' ✓';
+      } else {
+        log('⚠ 機種比對不符：匯入檔案 PRODUCT_SPECIFIED_ID = ' + readSig + '，但目前選擇機種為「' + modelLabel + '」。請確認左側「機種」選單是否選對，或確認匯入的檔案是否對應此機種！');
+        modelCheckLine = '⚠ 機種比對不符: 檔案=' + readSig + '，工具選擇=' + modelLabel;
+      }
+    }
+
     const importLines = [
       '檔名: ' + file.name,
       '匯入筆數: ' + entries.length + ' 個',
@@ -352,6 +402,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
     ];
     if (missing.length) importLines.push('缺少地址列表: ' + missing.join(', '));
     if (extra.length)   importLines.push('多餘地址列表: ' + extra.join(', '));
+    if (modelCheckLine) importLines.push(modelCheckLine);
     const importOk = missing.length === 0 && extra.length === 0;
     showResultModal('匯入' + (importOk ? '完成' : '完成（有差異）'), importOk, importLines);
   });
@@ -445,12 +496,31 @@ document.getElementById('btnRead').addEventListener('click', async () => {
   else                 state.paraListSource = 'read';
   updateSourceDisplay();
 
+  // ── 機種比對：讀回的 SIG0-3 (PRODUCT_SPECIFIED_ID) 是否與目前選擇的機種一致 ──
+  const sigAddrsFailed = failed.some(a => ['0000', '0001', '0002', '0003'].includes(a));
+  const model = currentModel();
+  let modelCheckLine = null;
+  if (!sigAddrsFailed) {
+    const readSig     = decodeSig(state.showPara ? state.paraList : state.hrList);
+    const expectedIds = MODEL_PRODUCT_IDS[model] || [];
+    const modelOk      = expectedIds.length === 0 || expectedIds.includes(readSig);
+    const modelLabel   = model ? (model + ' (Schaca)') : '標準 (ENEBDV02/12)';
+    if (modelOk) {
+      log('✓ 機種比對：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，與目前選擇機種相符');
+      modelCheckLine = '機種比對: ' + readSig + ' ✓';
+    } else {
+      log('⚠ 機種比對不符：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，但目前選擇機種為「' + modelLabel + '」。請確認左側「機種」選單是否選對！');
+      modelCheckLine = '⚠ 機種比對不符: 裝置=' + readSig + '，工具選擇=' + modelLabel;
+    }
+  }
+
   const readLines = [
     '共 ' + total + ' 個參數',
     '成功: ' + (total - failed.length) + ' 個',
     '失敗: ' + failed.length + ' 個',
   ];
   if (failed.length) readLines.push('失敗位址: ' + failed.join(', '));
+  if (modelCheckLine) readLines.push(modelCheckLine);
   showResultModal('讀取' + (failed.length ? '完成（部分失敗）' : '完成'), failed.length === 0, readLines);
 
   setBusy(false);
@@ -1009,7 +1079,7 @@ document.getElementById('btnConfig').addEventListener('click', async () => {
   });
   state.hrList = updated;
   const iniText = serializeParameterIni(updated);
-  localStorage.setItem(LS_PARAM, iniText);
+  localStorage.setItem(lsParamKey(currentModel()), iniText);
   if (state.paramFileHandle) {
     try {
       const writable = await state.paramFileHandle.createWritable();
@@ -2072,6 +2142,14 @@ document.getElementById('selChannel').addEventListener('change', (e) => {
 
 // Initialize active channel to comport (default)
 applyChannelSelection('comport');
+
+// ── Model selection (parameter.ini variant) ──
+document.getElementById('selModel').value = localStorage.getItem(LS_MODEL) || '';
+document.getElementById('selModel').addEventListener('change', (e) => {
+  localStorage.setItem(LS_MODEL, e.target.value);
+  log('機種切換 → ' + (e.target.options[e.target.selectedIndex].text) + '，重新載入 parameter.ini...');
+  autoLoadIni();
+});
 
 // Auto-load INI files on startup
 autoLoadIni();

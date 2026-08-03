@@ -108,6 +108,13 @@
     <section class="sb-section">
       <div class="app-title sb-app-title">Endex eBike Tool <span id="appVersion" class="version-badge"></span><a href="manual.html" target="_blank" class="manual-link" title="開啟操作說明書">?</a></div>
       <h4 class="sb-title">設定檔</h4>
+      <div class="field-row">
+        <span class="field-lbl">機種</span>
+        <select id="selModel">
+          <option value="" selected>標準 (ENEBDV02/12)</option>
+          <option value="ENEBDV04">ENEBDV04 (Schaca)</option>
+        </select>
+      </div>
       <div id="autoLoadStatus" class="auto-status">載入中...</div>
       <div id="paramIniName" class="ini-filename" title="目前載入的 parameter.ini 檔名"></div>
       <div class="btn-row">
@@ -451,6 +458,7 @@
 
 <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 
+<script src="js/paramData.js"></script>
 <script src="js/ini.js"></script>
 <script src="js/protocol.js"></script>
 <script src="js/serial.js"></script>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.4.13</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.00</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.4.13</div>
+  <div class="cover-ver">操作說明書 v1.5.00</div>
   <div class="cover-date">2026-07-16</div>
 </div>
 
@@ -708,6 +708,17 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.00</strong></td>
+      <td>2026-08-03</td>
+      <td>
+        <ul>
+          <li>新增機種選單：可切換「標準 (ENEBDV02/12)」與「ENEBDV04 (Schaca)」，切換後自動載入對應的 parameter.ini 變體（ENEBDV04 內建於程式碼中,離線 file:// 開啟也能自動載入,不需伺服器）</li>
+          <li>「讀取參數」「匯入 Config」完成後自動比對 SIG0-3（PRODUCT_SPECIFIED_ID）與目前選擇的機種是否相符,不符會於狀態記錄與結果視窗顯示警告</li>
+          <li>移除未使用的 parameter_102.ini、parameter_B.ini 變體檔案</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.4.13</strong></td>
       <td>2026-07-27</td>
       <td>
@@ -865,7 +876,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.4.13 &nbsp;｜&nbsp; 2026-07-27
+  Endex eBike Tool 操作說明書 v1.5.00 &nbsp;｜&nbsp; 2026-08-03
 </div>
 
 </div>
