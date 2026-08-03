@@ -330,14 +330,14 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <h2 id="s3-2">BLE 連線</h2>
 <div class="steps">
   <div class="step"><div class="step-num">1</div><div class="step-body">頂部列 <strong>Channel</strong> 選擇 <code>BLE</code>，Baud / Data / Stop / Parity 等序列埠專用設定會自動隱藏。</div></div>
-  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>開啟連線</strong>」，瀏覽器彈出 BLE 裝置選擇視窗，只會列出名稱為 <code>ESP_GATTS_DEMO</code> 的裝置（即 ESP32 BLE 橋接器）。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊「<strong>開啟連線</strong>」，瀏覽器彈出 BLE 裝置選擇視窗，只會列出名稱為 <code>ENDEX_CAN_xxxx</code> 的裝置（即 ESP32 BLE 橋接器）。</div></div>
   <div class="step"><div class="step-num">3</div><div class="step-body">選取裝置後，系統可能跳出配對確認視窗，點擊「<strong>配對</strong>」完成配對：</div></div>
 </div>
 <div class="dev-mock">
   <div class="dev-mock-title">file:/// 想要配對</div>
   <div class="dev-mock-body">
     <div class="dev-mock-list">
-      <div class="dev-mock-item selected"><span class="dev-mock-icon">▶</span>ESP_GATTS_DEMO</div>
+      <div class="dev-mock-item selected"><span class="dev-mock-icon">▶</span>ENDEX_CAN_xxxx</div>
     </div>
     <div class="dev-mock-footer">
       <span class="dev-mock-help">?</span>
@@ -354,7 +354,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 </div>
 <div class="box box-info">
   <div class="box-label">ℹ 找不到裝置</div>
-  確認 ESP32 BLE 橋接器已開機並正在廣播名稱 <code>ESP_GATTS_DEMO</code>；BLE 連線僅支援 Chrome / Edge（需具備 Web Bluetooth API）。
+  確認 ESP32 BLE 橋接器已開機並正在廣播名稱 <code>ENDEX_CAN_xxxx</code>；BLE 連線僅支援 Chrome / Edge（需具備 Web Bluetooth API）。
 </div>
 
 <!-- S4 -->
