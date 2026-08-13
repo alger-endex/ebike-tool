@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.00';
+const APP_VERSION = 'v1.5.01';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -837,14 +837,21 @@ function isValidDate(s) {
 async function onSetBitClick(idx) {
   const item = state.hrList[idx];
   if (!item) return;
-  const newVal = await openSetbitModal(item);
+
+  // Edit whichever single list is currently on screen — 副/paraList when
+  // comparing and this address has a paraList entry, otherwise 主/hrList.
+  // Matches the write-parameters source rule (list = showPara ? paraList : hrList)
+  // so confirming here never silently mutates the list you're NOT looking at.
+  const paraEntry  = state.showPara ? state.paraList.find(p => p.address === item.address) : null;
+  const displayItem = paraEntry ? { ...item, data: paraEntry.data } : item;
+
+  const newVal = await openSetbitModal(displayItem);
   if (newVal === null) return;
-  item.data = newVal;
-  if (state.showPara) {
-    const p = state.paraList.find(p => p.address === item.address);
-    if (p) p.data = newVal;
-  }
-  refreshParamDisplay(item);
+
+  if (paraEntry) paraEntry.data = newVal;
+  else           item.data = newVal;
+
+  refreshAllDisplays(state);
 }
 
 function onParamChange(idx, val) {

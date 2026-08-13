@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.00</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.01</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.00</div>
-  <div class="cover-date">2026-07-16</div>
+  <div class="cover-ver">操作說明書 v1.5.01</div>
+  <div class="cover-date">2026-08-13</div>
 </div>
 
 <!-- TOC -->
@@ -708,6 +708,15 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.01</strong></td>
+      <td>2026-08-13</td>
+      <td>
+        <ul>
+          <li>修正 SetBit（位元設定）編輯視窗：勾選「顯示比較參數」時，開啟編輯視窗未讀取目前顯示中的比較資料（誤用主要資料的舊值），確認後也會誤將修改同時寫回主要資料與比較資料兩邊；改為只讀取、只寫入目前實際顯示中的那一份，行為與「寫入參數」的資料來源規則一致</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.00</strong></td>
       <td>2026-08-03</td>
       <td>
@@ -876,7 +885,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.00 &nbsp;｜&nbsp; 2026-08-03
+  Endex eBike Tool 操作說明書 v1.5.01 &nbsp;｜&nbsp; 2026-08-13
 </div>
 
 </div>
