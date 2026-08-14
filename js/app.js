@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.01';
+const APP_VERSION = 'v1.5.02';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -32,6 +32,7 @@ const state = {
   dataImport2: [],   // {address,data} — from last import (showPara=true)
   dataRead:    [],   // {address,data} — from last device read
   paramFileHandle: null,   // FileSystemFileHandle — set when user picks parameter.ini via file picker
+  modelUserSelected: false,   // true once the user has manually picked a model via #selModel — disables auto-switch-on-mismatch so a deliberate choice is never silently overridden
   comSerial: new SerialManager(),
   bleSerial: new BleManager(),
   serial:    null,   // active channel — set at boot and on channel change
@@ -450,7 +451,14 @@ document.getElementById('chkShowPara').addEventListener('change', (e) => {
 // ─────────────────────────────────────────────────────────────
 //  Read parameters from device
 // ─────────────────────────────────────────────────────────────
-document.getElementById('btnRead').addEventListener('click', async () => {
+/**
+ * @param isRetryAfterModelSwitch  true when this call is the automatic re-read
+ *   triggered after an auto model-switch — disables further auto-switching so
+ *   a persistently-mismatched SIG can't cause an infinite retry loop.
+ * @param switchNote  message describing the auto-switch, carried into the
+ *   final result modal so the user sees what happened even if they missed the log.
+ */
+async function performRead(isRetryAfterModelSwitch = false, switchNote = null) {
   if (!state.serial.isOpen) { alert('請先開啟序列埠'); return; }
   if (!state.hrList.length)  { alert('請先載入 parameter.ini'); return; }
   if (state.busy) return;
@@ -509,7 +517,26 @@ document.getElementById('btnRead').addEventListener('click', async () => {
       log('✓ 機種比對：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，與目前選擇機種相符');
       modelCheckLine = '機種比對: ' + readSig + ' ✓';
     } else {
-      log('⚠ 機種比對不符：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，但目前選擇機種為「' + modelLabel + '」。請確認左側「機種」選單是否選對！');
+      const correctModel = Object.keys(MODEL_PRODUCT_IDS).find(k => MODEL_PRODUCT_IDS[k].includes(readSig));
+      if (correctModel !== undefined && !isRetryAfterModelSwitch && !state.modelUserSelected) {
+        // Device reports a SIG belonging to a known, different model — switch
+        // to it, reload the matching parameter.ini, and re-read automatically
+        // (the wrong-model read above is discarded; e.g. addresses only present
+        // on one variant would otherwise keep failing every time).
+        const correctLabel = correctModel ? (correctModel + ' (Schaca)') : '標準 (ENEBDV02/12)';
+        log('⚠ 機種比對不符：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，但目前選擇機種為「' + modelLabel +
+            '」。自動切換為「' + correctLabel + '」並重新讀取...');
+        document.getElementById('selModel').value = correctModel;
+        localStorage.setItem(LS_MODEL, correctModel);
+        await autoLoadIni();
+        setBusy(false);
+        await performRead(true, '已自動切換機種：' + modelLabel + ' → ' + correctLabel);
+        return;
+      }
+      const suffix = (correctModel !== undefined && state.modelUserSelected)
+        ? '（機種為手動選擇，不自動切換）請確認左側「機種」選單是否選對！'
+        : '請確認左側「機種」選單是否選對！';
+      log('⚠ 機種比對不符：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，但目前選擇機種為「' + modelLabel + '」。' + suffix);
       modelCheckLine = '⚠ 機種比對不符: 裝置=' + readSig + '，工具選擇=' + modelLabel;
     }
   }
@@ -520,11 +547,14 @@ document.getElementById('btnRead').addEventListener('click', async () => {
     '失敗: ' + failed.length + ' 個',
   ];
   if (failed.length) readLines.push('失敗位址: ' + failed.join(', '));
+  if (switchNote) readLines.push(switchNote);
   if (modelCheckLine) readLines.push(modelCheckLine);
   showResultModal('讀取' + (failed.length ? '完成（部分失敗）' : '完成'), failed.length === 0, readLines);
 
   setBusy(false);
-});
+}
+
+document.getElementById('btnRead').addEventListener('click', () => performRead());
 
 // ─────────────────────────────────────────────────────────────
 //  Write parameters to device
@@ -2153,6 +2183,10 @@ applyChannelSelection('comport');
 // ── Model selection (parameter.ini variant) ──
 document.getElementById('selModel').value = localStorage.getItem(LS_MODEL) || '';
 document.getElementById('selModel').addEventListener('change', (e) => {
+  // Only a real user interaction fires 'change' (programmatic .value = ... in
+  // the auto-switch path below does not), so this reliably marks "the user
+  // deliberately picked this model" and disables further auto-switching.
+  state.modelUserSelected = true;
   localStorage.setItem(LS_MODEL, e.target.value);
   log('機種切換 → ' + (e.target.options[e.target.selectedIndex].text) + '，重新載入 parameter.ini...');
   autoLoadIni();
