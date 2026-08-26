@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.03';
+const APP_VERSION = 'v1.5.04';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
