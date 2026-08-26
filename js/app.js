@@ -709,6 +709,11 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
 // ─────────────────────────────────────────────────────────────
 //  Low-level read / write helpers
 // ─────────────────────────────────────────────────────────────
+// CAN bus 上可能混雜其他 ID 的訊框（如 driver status 廣播）。
+// readCanFrame() 只認 framing 邊界、不看 ID，收到不相關的訊框時
+// 這裡最多再多讀幾次找出正確 ID，避免單一雜訊訊框就讓整次操作判失敗。
+const CAN_ID_MISMATCH_MAX_SKIP = 5;
+
 async function readUartParam(address) {
   state.serial.clearBuffer();
   await state.serial.write(buildUartRead(address));
@@ -722,12 +727,17 @@ async function readCanParam(address) {
   state.serial.clearBuffer();
   await state.serial.write(buildCanRead(address));
   await sleep(10);
-  const frame = await state.serial.readCanFrame(1000);
-  if (!frame) return null;
-  const r = parseCanResponse(frame);
-  if (!r || r.id !== 0x01005020) return null;
-  if (r.data[1] === 0x83) return null;
-  return (r.data[4] << 8) | r.data[5];
+  // Bus 上可能混雜其他 ID 的訊框（如 driver status 廣播）先於回應抵達；
+  // ID 不符時直接再讀一次，而非白白判失敗、耗掉外層 retryOp 的次數。
+  for (let skipped = 0; skipped < CAN_ID_MISMATCH_MAX_SKIP; skipped++) {
+    const frame = await state.serial.readCanFrame(skipped === 0 ? 1000 : 500);
+    if (!frame) return null;
+    const r = parseCanResponse(frame);
+    if (!r || r.id !== 0x01005020) continue;
+    if (r.data[1] === 0x83) return null;
+    return (r.data[4] << 8) | r.data[5];
+  }
+  return null;
 }
 
 async function writeUartParam(address, data) {
@@ -743,10 +753,15 @@ async function writeCanParam(address, data) {
   state.serial.clearBuffer();
   await state.serial.write(buildCanWrite(address, data & 0xFFFF));
   await sleep(10);
-  const frame = await state.serial.readCanFrame(1000);
-  if (!frame) return false;
-  const r = parseCanResponse(frame);
-  return r?.id === 0x01005020 && r.data[1] !== 0x86;
+  // 同上：ID 不符就立即再讀一次，濾掉 bus 雜訊而不是直接判失敗。
+  for (let skipped = 0; skipped < CAN_ID_MISMATCH_MAX_SKIP; skipped++) {
+    const frame = await state.serial.readCanFrame(skipped === 0 ? 1000 : 500);
+    if (!frame) return false;
+    const r = parseCanResponse(frame);
+    if (!r || r.id !== 0x01005020) continue;
+    return r.data[1] !== 0x86;
+  }
+  return false;
 }
 
 async function retryOp(maxRetries, fn) {
