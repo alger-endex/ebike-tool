@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.04';
+const APP_VERSION = 'v1.5.05';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -169,12 +169,14 @@ const LS_MODEL = 'endex_model';
 /** Model → parameter.ini filename. '' = standard CAN line (ENEBDV02/12). */
 const MODEL_FILES = {
   '':         'parameter.ini',
+  'ENEBDV01': 'parameter_ENEBDV01.ini',
   'ENEBDV04': 'parameter_ENEBDV04.ini',
 };
 
 /** Model → expected PRODUCT_SPECIFIED_ID string(s), decoded from SIG0-3 (0x0000-0x0003). */
 const MODEL_PRODUCT_IDS = {
   '':         ['ENEBDV02', 'ENEBDV12'],
+  'ENEBDV01': ['ENEBDV01', 'ENEBDV11'],
   'ENEBDV04': ['ENEBDV04'],
 };
 

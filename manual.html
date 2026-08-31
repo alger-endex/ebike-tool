@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.04</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.05</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.04</div>
+  <div class="cover-ver">操作說明書 v1.5.05</div>
   <div class="cover-date">2026-08-14</div>
 </div>
 
@@ -708,6 +708,18 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.05</strong></td>
+      <td>2026-08-31</td>
+      <td>
+        <ul>
+          <li>機種選單新增「UART (ENEBDV01/11)」，使用專屬的 <code>parameter_ENEBDV01.ini</code>。此前 UART 機種不在選單中，接上 UART 控制器只會顯示機種比對不符，且沿用 CAN 線的參數說明</li>
+          <li>UART 專屬設定檔修正了與 CAN 線語意不同的欄位說明：0x0200 bit1（輪周長來源）/ bit2（限速來源）順序與 CAN 相反；0x02A1 bit3 = ENDEX Code（韌體 v3.12 起 1 = 啟用）、bit5 = 電流上限總開關（v3.12 起語意改變）、bit1/bit4/bit6 在此線未實作；0x02A0 bit9 = 變速訊號、bit14 = 關閉馬達 NTC 保護；0x0500 值 0x05 在 UART 線是「依段位 + 限速」而非 Stand input IO</li>
+          <li>UART 線 0x0355（低速補償 %）上限由 100 改為 50，與韌體夾限一致</li>
+          <li>0x0300–0x0328 段位表的說明補上：UART 線的段位 index 由儀表送出的 Max PWM 值換算（floor(PWM/25)-2），不是儀表顯示的段數；原本「哪一段填 100% 決定總段數」的說明只適用 CAN 線</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.04</strong></td>
       <td>2026-08-26</td>
       <td>
@@ -913,7 +925,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.04 &nbsp;｜&nbsp; 2026-08-26
+  Endex eBike Tool 操作說明書 v1.5.05 &nbsp;｜&nbsp; 2026-08-31
 </div>
 
 </div>
