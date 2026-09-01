@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Endex eBike Tool** (`APP_VERSION` in [js/app.js](js/app.js) — currently v1.5.05) — A browser-based parameter configuration and firmware management utility for eBike motor controllers. Communicates with controllers over UART or CAN (via Web Serial API) or over BLE (via Web Bluetooth, bridged to UART by an ESP32-H2).
+**Endex eBike Tool** (`APP_VERSION` in [js/app.js](js/app.js) — currently v1.5.06) — A browser-based parameter configuration and firmware management utility for eBike motor controllers. Communicates with controllers over UART or CAN (via Web Serial API) or over BLE (via Web Bluetooth, bridged to UART by an ESP32-H2).
 
 ## Running the App
 
