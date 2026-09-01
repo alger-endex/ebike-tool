@@ -180,6 +180,13 @@ const MODEL_PRODUCT_IDS = {
   'ENEBDV04': ['ENEBDV04'],
 };
 
+/** Model → display label used in model-mismatch log messages. */
+const MODEL_LABELS = {
+  '':         '標準 CAN (ENEBDV02/12)',
+  'ENEBDV01': 'UART (ENEBDV01/11)',
+  'ENEBDV04': 'ENEBDV04 (Schaca)',
+};
+
 function currentModel() {
   return document.getElementById('selModel')?.value || '';
 }
@@ -387,7 +394,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
       const readSig     = decodeSig(state.showPara ? state.paraList : state.hrList);
       const expectedIds = MODEL_PRODUCT_IDS[model] || [];
       const modelOk      = expectedIds.length === 0 || expectedIds.includes(readSig);
-      const modelLabel   = model ? (model + ' (Schaca)') : '標準 (ENEBDV02/12)';
+      const modelLabel   = MODEL_LABELS[model] || model;
       if (modelOk) {
         log('✓ 機種比對：匯入檔案 PRODUCT_SPECIFIED_ID = ' + readSig + '，與目前選擇機種相符');
         modelCheckLine = '機種比對: ' + readSig + ' ✓';
@@ -514,7 +521,7 @@ async function performRead(isRetryAfterModelSwitch = false, switchNote = null) {
     const readSig     = decodeSig(state.showPara ? state.paraList : state.hrList);
     const expectedIds = MODEL_PRODUCT_IDS[model] || [];
     const modelOk      = expectedIds.length === 0 || expectedIds.includes(readSig);
-    const modelLabel   = model ? (model + ' (Schaca)') : '標準 (ENEBDV02/12)';
+    const modelLabel   = MODEL_LABELS[model] || model;
     if (modelOk) {
       log('✓ 機種比對：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，與目前選擇機種相符');
       modelCheckLine = '機種比對: ' + readSig + ' ✓';
@@ -525,7 +532,7 @@ async function performRead(isRetryAfterModelSwitch = false, switchNote = null) {
         // to it, reload the matching parameter.ini, and re-read automatically
         // (the wrong-model read above is discarded; e.g. addresses only present
         // on one variant would otherwise keep failing every time).
-        const correctLabel = correctModel ? (correctModel + ' (Schaca)') : '標準 (ENEBDV02/12)';
+        const correctLabel = MODEL_LABELS[correctModel] || correctModel;
         log('⚠ 機種比對不符：裝置 PRODUCT_SPECIFIED_ID = ' + readSig + '，但目前選擇機種為「' + modelLabel +
             '」。自動切換為「' + correctLabel + '」並重新讀取...');
         document.getElementById('selModel').value = correctModel;
