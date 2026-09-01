@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Endex eBike Tool** (`APP_VERSION` in [js/app.js](js/app.js) — currently v1.5.04) — A browser-based parameter configuration and firmware management utility for eBike motor controllers. Communicates with controllers over UART or CAN (via Web Serial API) or over BLE (via Web Bluetooth, bridged to UART by an ESP32-H2).
+**Endex eBike Tool** (`APP_VERSION` in [js/app.js](js/app.js) — currently v1.5.05) — A browser-based parameter configuration and firmware management utility for eBike motor controllers. Communicates with controllers over UART or CAN (via Web Serial API) or over BLE (via Web Bluetooth, bridged to UART by an ESP32-H2).
 
 ## Running the App
 
@@ -29,6 +29,7 @@ appendix-ini.html       — Standalone reference doc: page.ini / parameter.ini f
 style.css               — Dark theme; CSS variables for colors/layout
 page.ini                — Tab/section definitions for parameter display
 parameter.ini           — Default hardware register (HRItem) definitions
+parameter_ENEBDV01.ini  — Per-model HRItem variant for the UART line (ENEBDV01/11)
 parameter_ENEBDV04.ini  — Per-model HRItem variant for the ENEBDV04 (Schaca) motor
 js/
   app.js                — Main orchestrator: state, event handlers, connection workflow, keyboard shortcuts
