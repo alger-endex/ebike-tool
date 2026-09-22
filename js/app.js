@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.06';
+const APP_VERSION = 'v1.5.07';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -721,7 +721,7 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
 // CAN bus 上可能混雜其他 ID 的訊框（如 driver status 廣播）。
 // readCanFrame() 只認 framing 邊界、不看 ID，收到不相關的訊框時
 // 這裡最多再多讀幾次找出正確 ID，避免單一雜訊訊框就讓整次操作判失敗。
-const CAN_ID_MISMATCH_MAX_SKIP = 5;
+const CAN_ID_MISMATCH_MAX_SKIP = 10;
 
 async function readUartParam(address) {
   state.serial.clearBuffer();
@@ -739,7 +739,7 @@ async function readCanParam(address) {
   // Bus 上可能混雜其他 ID 的訊框（如 driver status 廣播）先於回應抵達；
   // ID 不符時直接再讀一次，而非白白判失敗、耗掉外層 retryOp 的次數。
   for (let skipped = 0; skipped < CAN_ID_MISMATCH_MAX_SKIP; skipped++) {
-    const frame = await state.serial.readCanFrame(skipped === 0 ? 1000 : 500);
+    const frame = await state.serial.readCanFrame(skipped === 0 ? 50 : 20);
     if (!frame) return null;
     const r = parseCanResponse(frame);
     if (!r || r.id !== 0x01005020) continue;
