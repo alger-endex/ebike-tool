@@ -142,7 +142,25 @@ function buildParamRow(item, idx, onParamChange, onSetBitClick) {
   row.appendChild(valWrap);
   row.appendChild(unitEl);
   row.appendChild(hexWrap);
+  item.rowEl = row;
   return row;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Import diff highlight — marks rows whose address was missing
+//  from / updated by the most recently imported config file
+// ─────────────────────────────────────────────────────────────
+
+function applyImportDiffHighlight(state, missingAddrSet, updatedAddrSet) {
+  state.hrList.forEach(function(item) {
+    if (!item.rowEl) return;
+    item.rowEl.classList.toggle('param-row-missing', missingAddrSet.has(item.address));
+    item.rowEl.classList.toggle('param-row-updated', updatedAddrSet.has(item.address));
+  });
+}
+
+function clearImportDiffHighlight(state) {
+  applyImportDiffHighlight(state, new Set(), new Set());
 }
 
 function commitInput(item, idx, rawValue, onParamChange) {

@@ -367,9 +367,8 @@ document.getElementById('btnImport').addEventListener('click', () => {
       }
     }
 
-    const missing = state.hrList
-      .filter(h => !found.has(h.address))
-      .map(h => h.address.toString(16).toUpperCase().padStart(4, '0'));
+    const missingItems = state.hrList.filter(h => !found.has(h.address));
+    const missing = missingItems.map(h => h.address.toString(16).toUpperCase().padStart(4, '0'));
 
     if (!state.showPara) { state.fileName1 = file.name; state.hrListSource   = 'import'; }
     else                 { state.fileName2 = file.name; state.paraListSource = 'import'; }
@@ -380,6 +379,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
     if (extra.length)   log('多餘地址: ' + extra.join(', '));
     log(`匯入完成: ${file.name}`);
 
+    applyImportDiffHighlight(state, new Set(missingItems.map(h => h.address)), found);
     refreshAllDisplays(state);
     updateSigDisplay();
     updateSnDisplay();
@@ -477,6 +477,7 @@ async function performRead(isRetryAfterModelSwitch = false, switchNote = null) {
   const failed = [];
   const total  = state.hrList.length;
   log('開始讀取...');
+  clearImportDiffHighlight(state);
 
   for (let i = 0; i < total; i++) {
     const item = state.hrList[i];

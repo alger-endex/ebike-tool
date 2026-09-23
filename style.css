@@ -468,6 +468,20 @@ body.log-collapsed .sb-toggle {
 .val-from-para     { color: var(--accent) !important; }
 .val-from-fallback { color: var(--text-dim) !important; }
 
+/* 匯入 Config 差異標記：缺少地址（紅）/ 已由檔案更新（藍） */
+.param-row-missing {
+  background: rgba(224, 108, 117, 0.16);
+  box-shadow: inset 3px 0 0 0 var(--danger);
+}
+.param-row-missing:hover { background: rgba(224, 108, 117, 0.26); }
+.param-row-missing .param-name-text { color: var(--danger); }
+
+.param-row-updated {
+  background: rgba(124, 158, 248, 0.10);
+  box-shadow: inset 3px 0 0 0 var(--accent);
+}
+.param-row-updated:hover { background: rgba(124, 158, 248, 0.18); }
+
 .show-para-legend {
   display: flex;
   flex-direction: column;
