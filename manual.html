@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.07</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.08</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.07</div>
-  <div class="cover-date">2026-09-22</div>
+  <div class="cover-ver">操作說明書 v1.5.08</div>
+  <div class="cover-date">2026-09-24</div>
 </div>
 
 <!-- TOC -->
@@ -708,6 +708,16 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.08</strong></td>
+      <td>2026-09-24</td>
+      <td>
+        <ul>
+          <li>BLE-CAN 讀取參數（readCanParam）等待訊框的逾時恢復為第一輪 1000ms、之後每輪 500ms，避免 BLE 橋接延遲造成讀取逾時；COM-CAN 維持 v1.5.07 的 50ms / 20ms</li>
+          <li>匯入 config 與目前參數有差異時，於參數列標色顯示：缺少的地址標紅、已由匯入檔更新的地址標藍；重新讀取參數時清除標色</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.07</strong></td>
       <td>2026-09-22</td>
       <td>
@@ -943,7 +953,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.07 &nbsp;｜&nbsp; 2026-09-22
+  Endex eBike Tool 操作說明書 v1.5.08 &nbsp;｜&nbsp; 2026-09-24
 </div>
 
 </div>

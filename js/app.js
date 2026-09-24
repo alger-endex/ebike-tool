@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.07';
+const APP_VERSION = 'v1.5.08';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -739,8 +739,12 @@ async function readCanParam(address) {
   await sleep(10);
   // Bus 上可能混雜其他 ID 的訊框（如 driver status 廣播）先於回應抵達；
   // ID 不符時直接再讀一次，而非白白判失敗、耗掉外層 retryOp 的次數。
+  // BLE-CAN 經 ESP32 橋接多一段延遲，逾時需放寬；COM-CAN 維持短逾時以加快讀取。
+  const isBle = state.serial === state.bleSerial;
+  const firstMs = isBle ? 1000 : 50;
+  const nextMs  = isBle ? 500  : 20;
   for (let skipped = 0; skipped < CAN_ID_MISMATCH_MAX_SKIP; skipped++) {
-    const frame = await state.serial.readCanFrame(skipped === 0 ? 50 : 20);
+    const frame = await state.serial.readCanFrame(skipped === 0 ? firstMs : nextMs);
     if (!frame) return null;
     const r = parseCanResponse(frame);
     if (!r || r.id !== 0x01005020) continue;
