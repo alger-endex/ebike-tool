@@ -745,6 +745,11 @@ async function readCanParam(address) {
     const r = parseCanResponse(frame);
     if (!r || r.id !== 0x01005020) continue;
     if (r.data[1] === 0x83) return null;
+    // 回應須為讀取 (FC 0x03)、位址與請求相同、長度足夠；否則視為前一筆逾時後
+    // 遲到的殘留回應，略過再讀，避免把別的位址的值寫進這一筆。
+    if (r.data[1] !== 0x03) continue;
+    if (r.data.length < 6) continue;
+    if (((r.data[2] << 8) | r.data[3]) !== (address & 0xFFFF)) continue;
     return (r.data[4] << 8) | r.data[5];
   }
   return null;
