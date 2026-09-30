@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.08</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.09</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.08</div>
-  <div class="cover-date">2026-09-24</div>
+  <div class="cover-ver">操作說明書 v1.5.09</div>
+  <div class="cover-date">2026-09-30</div>
 </div>
 
 <!-- TOC -->
@@ -708,6 +708,16 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.09</strong></td>
+      <td>2026-09-30</td>
+      <td>
+        <ul>
+          <li>CAN / BLE-CAN 讀取參數失敗時，log 附上失敗原因：「裝置回 0x83：不支援此地址（含例外碼）」、「逾時無回應」，或「連續收到其他 CAN ID / 位址不符的殘留回應」，方便判斷是控制器韌體未實作該地址還是通訊問題</li>
+          <li>裝置回 0x83 例外（地址不支援）時不再重試，直接判定失敗，節省讀取時間；逾時或雜訊訊框仍維持重試 3 次</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.08</strong></td>
       <td>2026-09-24</td>
       <td>
@@ -953,7 +963,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.08 &nbsp;｜&nbsp; 2026-09-24
+  Endex eBike Tool 操作說明書 v1.5.09 &nbsp;｜&nbsp; 2026-09-30
 </div>
 
 </div>

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Endex eBike Tool** (`APP_VERSION` in [js/app.js](js/app.js) — currently v1.5.08) — A browser-based parameter configuration and firmware management utility for eBike motor controllers. Communicates with controllers over UART or CAN (via Web Serial API) or over BLE (via Web Bluetooth, bridged to UART by an ESP32-H2).
+**Endex eBike Tool** (`APP_VERSION` in [js/app.js](js/app.js) — currently v1.5.09) — A browser-based parameter configuration and firmware management utility for eBike motor controllers. Communicates with controllers over UART or CAN (via Web Serial API) or over BLE (via Web Bluetooth, bridged to UART by an ESP32-H2).
 
 ## Running the App
 
@@ -16,6 +16,13 @@ python -m http.server 8080
 ```
 
 Then open `http://localhost:8080` in Chrome (Web Serial API is Chrome/Edge only).
+
+There is no build, lint, or test tooling (no `package.json`); verification is manual in the browser against real hardware.
+
+## Change Conventions
+
+- **Version bump**: a release updates `APP_VERSION` in `js/app.js`, the "currently vX" note at the top of this file, *and* `manual.html` (the `<title>`, the cover `cover-ver`/`cover-date` lines, the footer version/date line, and a new row at the top of the changelog table describing the change in zh-TW).
+- **Parameter INI edits**: `js/paramData.js` holds a verbatim copy (as a JSON-escaped one-line string) of `parameter_ENEBDV01.ini` and `parameter_ENEBDV04.ini`. Any edit to those files must be mirrored there, or `file://` users silently get the stale version. The default `parameter.ini` is not embedded.
 
 ## Architecture
 

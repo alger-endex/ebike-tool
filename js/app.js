@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.08';
+const APP_VERSION = 'v1.5.09';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -481,9 +481,13 @@ async function performRead(isRetryAfterModelSwitch = false, switchNote = null) {
 
   for (let i = 0; i < total; i++) {
     const item = state.hrList[i];
-    const data = await retryOp(3, () =>
-      state.isCAN ? readCanParam(item.address) : readUartParam(item.address)
-    );
+    const failReasons = [];
+    const data = await retryOp(3, async () => {
+      if (!state.isCAN) return readUartParam(item.address);
+      const v = await readCanParam(item.address);
+      if (v === null && lastCanReadFail) failReasons.push(lastCanReadFail);
+      return v;
+    }, () => state.isCAN && lastCanReadRejected);
 
     if (data !== null) {
       state.dataRead.push({ address: item.address, data });
@@ -495,7 +499,11 @@ async function performRead(isRetryAfterModelSwitch = false, switchNote = null) {
       }
     } else {
       failed.push(item.address.toString(16).toUpperCase().padStart(4, '0'));
-      log(`  ${item.address.toString(16).toUpperCase().padStart(4, '0')} 無法讀取`);
+      // 同一原因合併計次，例如「裝置回 0x83：不支援此地址 ×3」
+      const counts = new Map();
+      for (const r of failReasons) counts.set(r, (counts.get(r) || 0) + 1);
+      const why = [...counts].map(([r, n]) => n > 1 ? `${r} ×${n}` : r).join(' / ');
+      log(`  ${item.address.toString(16).toUpperCase().padStart(4, '0')} 無法讀取${why ? '（' + why + '）' : ''}`);
       if (failed.length >= 10) { log('10 個地址失敗，停止讀取'); break; }
     }
 
@@ -584,7 +592,8 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
       const val = await retryOp(3, () =>
         state.isCAN
           ? readCanParam(state.hrList[i].address)
-          : readUartParam(state.hrList[i].address)
+          : readUartParam(state.hrList[i].address),
+        () => state.isCAN && lastCanReadRejected
       );
       if (val === null || val === false) {
         log('❌ SIG' + i + ' 讀取失敗，中止寫入');
@@ -724,6 +733,27 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
 // 這裡最多再多讀幾次找出正確 ID，避免單一雜訊訊框就讓整次操作判失敗。
 const CAN_ID_MISMATCH_MAX_SKIP = 10;
 
+// readCanParam() 回傳 null 時，這裡記錄最後一次失敗的原因（供 log 顯示），
+// 區分：裝置回 0x83 例外 / 逾時無回應 / 一直收到其他 CAN ID 或不相符的回應。
+let lastCanReadFail = null;
+// 最後一次失敗是裝置回 0x83 例外（地址不支援）— 結果固定，呼叫端不必重試。
+let lastCanReadRejected = false;
+
+function fmtHex(v, width) {
+  return '0x' + (v >>> 0).toString(16).toUpperCase().padStart(width, '0');
+}
+
+/** 描述 readCanParam 途中略過的訊框：foreignIds 為其他 CAN ID，staleCount 為 FC/位址不符的殘留回應。 */
+function describeCanSkips(foreignIds, staleCount) {
+  const parts = [];
+  if (foreignIds.length) {
+    const ids = [...new Set(foreignIds)];
+    parts.push(`其他 CAN ID ${foreignIds.length} 筆：${ids.slice(0, 4).map(id => fmtHex(id, 8)).join(', ')}${ids.length > 4 ? ' …' : ''}`);
+  }
+  if (staleCount) parts.push(`FC/位址不符的殘留回應 ${staleCount} 筆`);
+  return parts.join('；');
+}
+
 async function readUartParam(address) {
   state.serial.clearBuffer();
   await state.serial.write(buildUartRead(address));
@@ -743,19 +773,34 @@ async function readCanParam(address) {
   const isBle = state.serial === state.bleSerial;
   const firstMs = isBle ? 1000 : 50;
   const nextMs  = isBle ? 500  : 20;
+  const foreignIds = [];
+  let staleCount = 0;
+  lastCanReadFail = null;
+  lastCanReadRejected = false;
   for (let skipped = 0; skipped < CAN_ID_MISMATCH_MAX_SKIP; skipped++) {
     const frame = await state.serial.readCanFrame(skipped === 0 ? firstMs : nextMs);
-    if (!frame) return null;
+    if (!frame) {
+      const skips = describeCanSkips(foreignIds, staleCount);
+      lastCanReadFail = skipped === 0 ? '逾時無回應' : `逾時無回應（之前略過 ${skips}）`;
+      return null;
+    }
     const r = parseCanResponse(frame);
-    if (!r || r.id !== 0x01005020) continue;
-    if (r.data[1] === 0x83) return null;
+    if (!r) { staleCount++; continue; }
+    if (r.id !== 0x01005020) { foreignIds.push(r.id); continue; }
+    if (r.data[1] === 0x83) {
+      const code = r.data.length > 2 ? '，例外碼 ' + fmtHex(r.data[2], 2) : '';
+      lastCanReadFail = `裝置回 0x83：不支援此地址${code}`;
+      lastCanReadRejected = true;
+      return null;
+    }
     // 回應須為讀取 (FC 0x03)、位址與請求相同、長度足夠；否則視為前一筆逾時後
     // 遲到的殘留回應，略過再讀，避免把別的位址的值寫進這一筆。
-    if (r.data[1] !== 0x03) continue;
-    if (r.data.length < 6) continue;
-    if (((r.data[2] << 8) | r.data[3]) !== (address & 0xFFFF)) continue;
+    if (r.data[1] !== 0x03) { staleCount++; continue; }
+    if (r.data.length < 6) { staleCount++; continue; }
+    if (((r.data[2] << 8) | r.data[3]) !== (address & 0xFFFF)) { staleCount++; continue; }
     return (r.data[4] << 8) | r.data[5];
   }
+  lastCanReadFail = `連續 ${CAN_ID_MISMATCH_MAX_SKIP} 筆都不是本次回應（${describeCanSkips(foreignIds, staleCount)}）`;
   return null;
 }
 
@@ -783,7 +828,8 @@ async function writeCanParam(address, data) {
   return false;
 }
 
-async function retryOp(maxRetries, fn) {
+/** stopIf()：失敗後回傳 true 則不再重試（例如裝置明確拒絕，重試結果必然相同）。 */
+async function retryOp(maxRetries, fn, stopIf = null) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       const result = await fn();
@@ -791,6 +837,7 @@ async function retryOp(maxRetries, fn) {
       if (result === false) {
         // write returned false — still retry
       }
+      if (stopIf?.()) return null;
     } catch {}
     await sleep(15);
   }
