@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.10';
+const APP_VERSION = 'v1.5.11';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -343,18 +343,30 @@ function rebuildTabs() {
 // ─────────────────────────────────────────────────────────────
 //  Config import / export
 // ─────────────────────────────────────────────────────────────
+// 韌體已退役的位址：匯入檔若含這些行，除了列入「多餘地址」（照常不寫入）外，
+// 另以 ⚠ 提示替代位址，提醒使用者清理流通中的舊 CONFIG 檔。
+const RETIRED_ADDRESSES = {
+  0x0416: '已退役 (UART v3.11+ / CAN 同批)，扭力靈敏度請用 0x0410',
+};
+
 document.getElementById('btnImport').addEventListener('click', () => {
   pickFile('.txt,.csv', async (file) => {
     const entries = parseConfigTxt(await file.text());
     const found   = new Set();
     const extra   = [];
+    const retired = [];   // 命中 RETIRED_ADDRESSES 的提示訊息
 
     if (!state.showPara) state.dataImport1 = [];
     else                 state.dataImport2 = [];
 
     for (const { address, data } of entries) {
       const item = state.hrList.find(h => h.address === address);
-      if (!item) { extra.push(address.toString(16).toUpperCase().padStart(4, '0')); continue; }
+      if (!item) {
+        const addrHex = address.toString(16).toUpperCase().padStart(4, '0');
+        extra.push(addrHex);
+        if (RETIRED_ADDRESSES[address]) retired.push(`⚠ ${addrHex}${data.toString(16).toUpperCase().padStart(4, '0')}：${RETIRED_ADDRESSES[address]}（未寫入，請從 CONFIG 檔刪除此行）`);
+        continue;
+      }
       found.add(address);
       if (!state.showPara) {
         item.data = data;
@@ -377,6 +389,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
 
     if (missing.length) log('缺少地址: ' + missing.join(', '));
     if (extra.length)   log('多餘地址: ' + extra.join(', '));
+    for (const msg of retired) log(msg);
     log(`匯入完成: ${file.name}`);
 
     applyImportDiffHighlight(state, new Set(missingItems.map(h => h.address)), found);
@@ -412,6 +425,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
     ];
     if (missing.length) importLines.push('缺少地址列表: ' + missing.join(', '));
     if (extra.length)   importLines.push('多餘地址列表: ' + extra.join(', '));
+    importLines.push(...retired);
     if (modelCheckLine) importLines.push(modelCheckLine);
     const importOk = missing.length === 0 && extra.length === 0;
     showResultModal('匯入' + (importOk ? '完成' : '完成（有差異）'), importOk, importLines);

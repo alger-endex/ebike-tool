@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.10</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.11</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.10</div>
+  <div class="cover-ver">操作說明書 v1.5.11</div>
   <div class="cover-date">2026-10-05</div>
 </div>
 
@@ -708,6 +708,15 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.11</strong></td>
+      <td>2026-10-05</td>
+      <td>
+        <ul>
+          <li>匯入 Config 時，若檔案含韌體已退役的位址（目前為 0x0416），除列入「多餘地址」不寫入外，另於 log 與結果視窗以 ⚠ 標示並提示替代位址（0x0416 → 0x0410 扭力靈敏度），提醒清理舊 CONFIG 檔</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.10</strong></td>
       <td>2026-10-05</td>
       <td>
@@ -975,7 +984,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.10 &nbsp;｜&nbsp; 2026-10-05
+  Endex eBike Tool 操作說明書 v1.5.11 &nbsp;｜&nbsp; 2026-10-05
 </div>
 
 </div>
