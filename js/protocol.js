@@ -40,31 +40,24 @@ function buildUartWrite(address, data) {
   return p;
 }
 
-/** Build UART save command */
-function buildUartSave() {
-  const p = new Uint8Array(12);
-  p[0] = 0x3A; p[1] = 0x2B; p[2] = 0x06; p[3] = 0x04;
-  p[4] = 0x05; p[5] = 0x55; p[6] = 0x00; p[7] = 0x01;
-  const crc = uartCrc(p, 8);
-  p[8] = crc & 0xFF; p[9] = (crc >> 8) & 0xFF;
-  p[10] = 0x0D; p[11] = 0x0A;
-  return p;
-}
-
 /**
  * Parse UART response bytes.
- * Returns { address, data } on success, or { error: string } on failure.
+ * Returns { func, address, data } on success, { error, func, address } for an
+ * exception frame (firmware echoes the address), or { error } for a bad frame.
  */
 function parseUartResponse(bytes) {
   if (!bytes || bytes.length < 12) return { error: 'Short response' };
   const crcRecv = bytes[8] | (bytes[9] << 8);
   const crcCalc = uartCrc(bytes, 8);
   if (crcRecv !== crcCalc) return { error: 'CRC error' };
-  if (bytes[2] === 0x83) return { error: 'Exception 0x83' };
-  if (bytes[2] === 0x86) return { error: 'Write error 0x86' };
+  const func    = bytes[2];
+  const address = (bytes[4] << 8) | bytes[5];
+  if (func === 0x83) return { error: 'Exception 0x83', func, address };
+  if (func === 0x86) return { error: 'Write error 0x86', func, address };
   return {
-    address: (bytes[4] << 8) | bytes[5],
-    data:    (bytes[6] << 8) | bytes[7],
+    func,
+    address,
+    data: (bytes[6] << 8) | bytes[7],
   };
 }
 
@@ -91,16 +84,6 @@ function buildCanRead(address) {
 
 function buildCanWrite(address, data) {
   const d = new Uint8Array([0x01, 0x06, (address >> 8) & 0xFF, address & 0xFF, (data >> 8) & 0xFF, data & 0xFF, 0, 0]);
-  return buildToolRPacket(0x03002050, d);
-}
-
-function buildCanSave() {
-  const d = new Uint8Array([0x01, 0x06, 0x05, 0x55, 0x00, 0x01, 0x00, 0x00]);
-  return buildToolRPacket(0x03002050, d);
-}
-
-function buildCanReload() {
-  const d = new Uint8Array([0x01, 0x06, 0x05, 0x55, 0x00, 0x02, 0x00, 0x00]);
   return buildToolRPacket(0x03002050, d);
 }
 

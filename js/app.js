@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.09';
+const APP_VERSION = 'v1.5.10';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -660,10 +660,11 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
     const ok = await retryOp(3, () =>
       state.isCAN
         ? writeCanParam(item.address, item.data)
-        : writeUartParam(item.address, item.data)
+        : writeUartParam(item.address, item.data),
+      () => lastWriteRejected
     );
 
-    log(`  [${addrHex}] ${name} = ${item.data}  ${ok ? '✓' : '✗'}`);
+    log(`  [${addrHex}] ${name} = ${item.data}  ${ok ? '✓' : '✗' + (lastWriteFail ? '（' + lastWriteFail + '）' : '')}`);
 
     if (!ok) {
       failed.push(addrHex);
@@ -674,39 +675,33 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
     setProgress(Math.round(count / total * 100), `${count}/${total}`);
   }
 
-  // Save command
+  // Save command — 有地址寫入失敗時先確認，避免把不完整的參數組存進 flash
   let saveOk = null;
-  try {
-    if (state.isCAN) {
-      state.serial.clearBuffer();
-      await state.serial.write(buildCanSave());
-      await sleep(10);
-      const sr = await state.serial.readCanFrame(1000);
-      const sp = sr ? parseCanResponse(sr) : null;
-      log(sp?.data[1] !== 0x86 ? 'SAVE ok' : 'SAVE Err');
+  let saveMsg = '未執行/異常';
+  let reloadMsg = null;
+  const doSave = !failed.length || confirm(
+    `有 ${failed.length} 個地址寫入失敗：${failed.join(', ')}\n\n` +
+    `確定 → 仍存入 flash (SAVE)\n取消 → 不存檔（裝置重開機後回到原本的參數）`
+  );
+  if (!doSave) {
+    saveMsg = '已取消（有地址寫入失敗）';
+    log('有地址寫入失敗，使用者取消 SAVE');
+  } else {
+    try {
+      const s = await runFlashCommand(1);
+      saveOk = s.ok;
+      saveMsg = s.ok ? '成功' : '失敗：' + s.msg;
+      logFlashResult('Save', s);
 
-      state.serial.clearBuffer();
-      await state.serial.write(buildCanReload());
-      await sleep(10);
-      const rr = await state.serial.readCanFrame(1000);
-      const rp = rr ? parseCanResponse(rr) : null;
-      log(rp?.data[1] !== 0x86 ? 'reLoad ok' : 'reLoad Err');
-
-      await sleep(1000);
-      const saveCheck = await readCanParam(0x0555);
-      saveOk = saveCheck === 0;
-      log(saveOk ? 'Save 成功' : 'Save 失敗');
-    } else {
-      state.serial.clearBuffer();
-      await state.serial.write(buildUartSave());
-
-      await sleep(1000);
-      const saveCheck = await readUartParam(0x0555);
-      saveOk = saveCheck === 0;
-      log(saveOk ? 'Save 成功' : 'Save 失敗');
+      // CAN 存檔完成後再重新載入 Flash → RAM（存檔進行中送 reLoad 會被韌體以 0x86 拒絕）
+      if (s.ok && state.isCAN) {
+        const r = await runFlashCommand(2);
+        reloadMsg = r.ok ? '成功' : '失敗：' + r.msg;
+        logFlashResult('reLoad', r);
+      }
+    } catch (e) {
+      log('儲存指令異常: ' + e.message);
     }
-  } catch (e) {
-    log('儲存指令異常: ' + e.message);
   }
 
   setProgress(0);
@@ -719,7 +714,8 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
     '失敗: ' + failed.length + ' 個',
   ];
   if (failed.length) writeLines.push('失敗位址: ' + failed.join(', '));
-  writeLines.push('儲存(Save): ' + (saveOk === null ? '未執行/異常' : (saveOk ? '成功' : '失敗')));
+  writeLines.push('儲存(Save): ' + saveMsg);
+  if (reloadMsg) writeLines.push('重新載入(reLoad): ' + reloadMsg);
   showResultModal('寫入' + (failed.length || !saveOk ? '完成（部分失敗）' : '完成'), failed.length === 0 && saveOk === true, writeLines);
 
   setBusy(false);
@@ -743,6 +739,10 @@ function fmtHex(v, width) {
   return '0x' + (v >>> 0).toString(16).toUpperCase().padStart(width, '0');
 }
 
+function hexBytes(bytes) {
+  return Array.from(bytes, b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+}
+
 /** 描述 readCanParam 途中略過的訊框：foreignIds 為其他 CAN ID，staleCount 為 FC/位址不符的殘留回應。 */
 function describeCanSkips(foreignIds, staleCount) {
   const parts = [];
@@ -754,13 +754,22 @@ function describeCanSkips(foreignIds, staleCount) {
   return parts.join('；');
 }
 
+// UART 回應的位址或功能碼不符時（前一筆逾時後遲到的殘留回應），最多再讀幾筆。
+const UART_STALE_MAX_SKIP = 3;
+
 async function readUartParam(address) {
   state.serial.clearBuffer();
   await state.serial.write(buildUartRead(address));
-  const frame = await state.serial.readUartFrame(1000);
-  if (!frame) return null;
-  const r = parseUartResponse(frame);
-  return r.error ? null : r.data;
+  for (let skipped = 0; skipped < UART_STALE_MAX_SKIP; skipped++) {
+    const frame = await state.serial.readUartFrame(skipped === 0 ? 1000 : 200);
+    if (!frame) return null;
+    const r = parseUartResponse(frame);
+    if (r.address === undefined) return null;   // 長度不足 / CRC 錯誤
+    // 回應須為讀取 (FC 0x03 或其例外 0x83) 且位址回音與請求相同，否則是殘留回應
+    if ((r.func & 0x7F) !== 0x03 || r.address !== (address & 0xFFFF)) continue;
+    return r.error ? null : r.data;
+  }
+  return null;
 }
 
 async function readCanParam(address) {
@@ -804,28 +813,121 @@ async function readCanParam(address) {
   return null;
 }
 
-async function writeUartParam(address, data) {
-  state.serial.clearBuffer();
-  await state.serial.write(buildUartWrite(address, data & 0xFFFF));
-  const frame = await state.serial.readUartFrame(1000);
-  if (!frame) return false;
-  const r = parseUartResponse(frame);
-  return !r.error;
+// write*Param() 回傳 false 時記錄失敗原因（供 log 顯示）；
+// lastWriteRejected = 裝置明確拒絕或回填值不同 — 結果固定，呼叫端不必重試。
+let lastWriteFail = null;
+let lastWriteRejected = false;
+// 最後一次採用的寫入回應訊框（hex），供 SAVE 等需要顯示回應內容的地方 log。
+let lastWriteResp = null;
+
+/** 判定一筆位址已比對相符的寫入回應。checkData=false 時不比對回填值（如 0x0555 SAVE）。 */
+function acceptWriteEcho(rejected, echoed, sent, checkData) {
+  if (rejected) {
+    lastWriteFail = '裝置回 0x86：拒絕寫入';
+    lastWriteRejected = true;
+    return false;
+  }
+  // 韌體寫入成功時回填實際生效值；不同代表被截斷或修正（例如 uint8 寫入 >255）
+  if (checkData && echoed !== sent) {
+    lastWriteFail = `回填值 ${echoed} ≠ 寫入值 ${sent}`;
+    lastWriteRejected = true;
+    return false;
+  }
+  return true;
 }
 
-async function writeCanParam(address, data) {
+async function writeUartParam(address, data, checkData = true) {
+  data &= 0xFFFF;
+  lastWriteFail = null;
+  lastWriteRejected = false;
+  lastWriteResp = null;
   state.serial.clearBuffer();
-  await state.serial.write(buildCanWrite(address, data & 0xFFFF));
+  await state.serial.write(buildUartWrite(address, data));
+  for (let skipped = 0; skipped < UART_STALE_MAX_SKIP; skipped++) {
+    const frame = await state.serial.readUartFrame(skipped === 0 ? 1000 : 200);
+    if (!frame) { lastWriteFail = '逾時無回應'; return false; }
+    const r = parseUartResponse(frame);
+    if (r.address === undefined) { lastWriteFail = r.error; return false; }
+    // 功能碼須為寫入 (0x06 或其例外 0x86) 且位址回音相同，否則是殘留回應
+    if ((r.func & 0x7F) !== 0x06 || r.address !== (address & 0xFFFF)) continue;
+    lastWriteResp = hexBytes(frame);
+    return acceptWriteEcho(!!r.error, r.data, data, checkData);
+  }
+  lastWriteFail = `連續 ${UART_STALE_MAX_SKIP} 筆都不是本次回應`;
+  return false;
+}
+
+async function writeCanParam(address, data, checkData = true) {
+  data &= 0xFFFF;
+  lastWriteFail = null;
+  lastWriteRejected = false;
+  lastWriteResp = null;
+  state.serial.clearBuffer();
+  await state.serial.write(buildCanWrite(address, data));
   await sleep(10);
   // 同上：ID 不符就立即再讀一次，濾掉 bus 雜訊而不是直接判失敗。
   for (let skipped = 0; skipped < CAN_ID_MISMATCH_MAX_SKIP; skipped++) {
     const frame = await state.serial.readCanFrame(skipped === 0 ? 1000 : 500);
-    if (!frame) return false;
+    if (!frame) { lastWriteFail = '逾時無回應'; return false; }
     const r = parseCanResponse(frame);
     if (!r || r.id !== 0x01005020) continue;
-    return r.data[1] !== 0x86;
+    if (r.data[1] === 0x86) {
+      // 錯誤幀：data[2]=例外碼，位址在 data[3..4]（比成功幀多位移一格）
+      if (r.data.length >= 5 && ((r.data[3] << 8) | r.data[4]) !== (address & 0xFFFF)) continue;
+      lastWriteResp = `ID ${fmtHex(r.id, 8)} data ${hexBytes(r.data)}`;
+      return acceptWriteEcho(true, 0, data, checkData);
+    }
+    // 成功幀：data[1]=0x06、data[2..3]=位址、data[4..5]=回填值；不符視為殘留回應
+    if (r.data[1] !== 0x06 || r.data.length < 6) continue;
+    if (((r.data[2] << 8) | r.data[3]) !== (address & 0xFFFF)) continue;
+    lastWriteResp = `ID ${fmtHex(r.id, 8)} data ${hexBytes(r.data)}`;
+    return acceptWriteEcho(false, (r.data[4] << 8) | r.data[5], data, checkData);
   }
+  lastWriteFail = `連續 ${CAN_ID_MISMATCH_MAX_SKIP} 筆都不是本次回應`;
   return false;
+}
+
+// 0x0555 flash 旗標：寫 1 = 存檔、2 = 重載；完成後回 0，進行中為 1/2，其他非零 = 失敗。
+const FLASH_FLAG_ADDR = 0x0555;
+const FLASH_POLL_TIMEOUT_MS = 5000;
+
+/**
+ * 送出 0x0555 指令（1 = SAVE、2 = reLoad）並輪詢至完成。
+ * 回傳 { ok, msg, resp, poll }：resp = 指令回應訊框（hex，無回應為 null），
+ * poll = 輪詢經過（例如「1 → 1 → 0，3 次，612ms」，「—」代表該次無回應）。
+ */
+async function runFlashCommand(value) {
+  const sent = state.isCAN
+    ? await writeCanParam(FLASH_FLAG_ADDR, value, false)
+    : await writeUartParam(FLASH_FLAG_ADDR, value, false);
+  const resp = lastWriteResp;
+  if (!sent) return { ok: false, msg: '指令未被接受（' + lastWriteFail + '）', resp, poll: null };
+
+  const t0 = Date.now();
+  const deadline = t0 + FLASH_POLL_TIMEOUT_MS;
+  const trace = [];
+  const result = (ok, msg) => ({
+    ok, msg, resp,
+    poll: `${trace.map(v => v === null ? '—' : v).join(' → ')}，${trace.length} 次，${Date.now() - t0}ms`,
+  });
+  let last = null;
+  do {
+    await sleep(200);
+    const v = state.isCAN ? await readCanParam(FLASH_FLAG_ADDR) : await readUartParam(FLASH_FLAG_ADDR);
+    trace.push(v);
+    if (v === 0) return result(true, '');
+    if (v !== null && v !== 1 && v !== 2) return result(false, `0x0555 = ${v}（韌體回報 flash 寫入失敗）`);
+    if (v !== null) last = v;
+  } while (Date.now() < deadline);
+  return result(false,
+    last === null ? '0x0555 讀取無回應' : `逾時 ${FLASH_POLL_TIMEOUT_MS / 1000}s，0x0555 仍為 ${last}（進行中）`);
+}
+
+/** 將 runFlashCommand 結果寫入 log：指令回應訊框 + 輪詢經過 + 成敗。 */
+function logFlashResult(label, r) {
+  log(`${label} 指令回應：${r.resp ?? '無'}`);
+  if (r.poll) log(`${label} 0x0555 輪詢：${r.poll}`);
+  log(r.ok ? `${label} 成功` : `${label} 失敗：${r.msg}`);
 }
 
 /** stopIf()：失敗後回傳 true 則不再重試（例如裝置明確拒絕，重試結果必然相同）。 */

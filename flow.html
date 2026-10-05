@@ -181,8 +181,8 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
   <tr><td>1</td><td>前置檢查</td><td>序列埠未開啟 → alert 退出；hrList 為空 → alert 退出；busy 旗標為 true → 直接返回</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>2</td><td>初始化狀態</td><td><code>busy=true</code>、清空 <code>dataRead</code> 與 <code>failed</code> 陣列、進度條歸零</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>3</td><td>逐一讀取</td><td>依 <code>hrList</code> 順序，對每個 HRItem 呼叫對應協議的讀取函式</td><td><span class="badge badge-both">兩者</span></td></tr>
-  <tr><td>4</td><td>UART 讀取</td><td><code>readUartParam(addr)</code>：clearBuffer → write(buildUartRead) → readUartFrame(1000ms) → parseUartResponse → 回傳 data 或 null</td><td><span class="badge badge-uart">UART</span></td></tr>
-  <tr><td>5</td><td>CAN 讀取</td><td><code>readCanParam(addr)</code>：clearBuffer → write(buildCanRead) → sleep(10ms) → readCanFrame(1000ms) → parseCanResponse → 驗證 ID=0x01005020 → 回傳 data[4]&lt;&lt;8|data[5] 或 null</td><td><span class="badge badge-can">CAN</span></td></tr>
+  <tr><td>4</td><td>UART 讀取</td><td><code>readUartParam(addr)</code>：clearBuffer → write(buildUartRead) → readUartFrame(1000ms) → parseUartResponse → 驗證功能碼 0x03 且位址回音 = 請求位址（不符視為殘留回應，再讀最多 3 筆，每筆 200ms）→ 回傳 data 或 null</td><td><span class="badge badge-uart">UART</span></td></tr>
+  <tr><td>5</td><td>CAN 讀取</td><td><code>readCanParam(addr)</code>：clearBuffer → write(buildCanRead) → sleep(10ms) → readCanFrame(1000ms) → parseCanResponse → 驗證 ID=0x01005020、功能碼 0x03、位址回音 = 請求位址（不符則略過再讀）→ 回傳 data[4]&lt;&lt;8|data[5] 或 null</td><td><span class="badge badge-can">CAN</span></td></tr>
   <tr><td>6</td><td>重試機制</td><td>每個位址最多重試 3 次，失敗間隔 15ms（<code>retryOp</code>）</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>7</td><td>更新資料</td><td>成功 → 寫入 <code>hrList[i].data</code>（或 paraList）+ 推入 <code>dataRead</code>；失敗 → 加入 <code>failed[]</code></td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>8</td><td>中止條件</td><td>累計失敗 ≥ 10 個位址時自動中止，防止卡死</td><td><span class="badge badge-both">兩者</span></td></tr>
@@ -264,7 +264,7 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
   ║   retryOp(3次) ─┬─ UART → writeUartParam(addr,data) ║
   ║                  └─ CAN  → writeCanParam(addr,data)  ║
   ║                                                  ║
-  ║   log([ADDR] name = val  ✓/✗)                   ║
+  ║   log([ADDR] name = val  ✓/✗（失敗原因）)       ║
   ║                                                  ║
   ║   ┌─────────────────────────────────────┐        ║
   ║   │ 失敗？→ failed.push(addr)            │        ║
@@ -278,20 +278,18 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
   ║          Save 指令               ║
   ╚══════════════════════════════════╝
           │
-          ├── UART：
-          │     write(buildUartSave)         ← 寫入 addr=0x0555, data=0x0001
-          │     sleep(1000ms)
-          │     readUartParam(0x0555)
-          │     log(0 → "Save 成功"  其他 → "Save 失敗")
+          ├── failed.length > 0 → confirm(仍要 SAVE？) ── 取消 → 不存檔
           │
-          └── CAN：
-                write(buildCanSave)          ← 同上 via CAN
-                readCanFrame → log(SAVE ok/Err)
-                write(buildCanReload)        ← 重新載入 Flash → RAM
-                readCanFrame → log(reLoad ok/Err)
-                sleep(1000ms)
-                readCanParam(0x0555)
-                log(0 → "Save 成功"  其他 → "Save 失敗")
+          ├── runFlashCommand(1)            ← 寫入 addr=0x0555, data=1（SAVE）
+          │     write*Param(0x0555, 1)      ← 回應須位址相符且非 0x86；無回應 = 失敗
+          │     每 200ms 讀 0x0555，最多 5s：
+          │       0     → "Save 成功"
+          │       1 / 2 → 進行中，繼續輪詢
+          │       其他  → "Save 失敗"（顯示該值）
+          │       逾時 / 一直無回應 → "Save 失敗"
+          │
+          └── CAN 且 SAVE 成功：
+                runFlashCommand(2)          ← reLoad：Flash 重載 RAM，同樣輪詢至 0
                    │
           ┌────────▼────────┐
           │  setProgress(0)  │
@@ -308,12 +306,12 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
   <tr><td>3</td><td>確認寫入來源</td><td>UART 從 index=4 開始（跳過 SIG0~3）；CAN 從 index=0 開始（可寫 SIG）</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>4</td><td>showPara 衝突處理</td><td>showPara 模式且 paraList 與 hrList 數量不符時，彈出 confirm 讓使用者選擇寫入來源</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>5</td><td>過濾清單</td><td>排除 <code>production=True</code> 的參數（生產序號）；排除 <code>address ≤ 0x0020</code> 的系統保護位址</td><td><span class="badge badge-both">兩者</span></td></tr>
-  <tr><td>6</td><td>UART 寫入</td><td><code>writeUartParam(addr, data)</code>：clearBuffer → write(buildUartWrite) → readUartFrame(1000ms) → parseUartResponse → 回傳 true/false</td><td><span class="badge badge-uart">UART</span></td></tr>
-  <tr><td>7</td><td>CAN 寫入</td><td><code>writeCanParam(addr, data)</code>：clearBuffer → write(buildCanWrite) → sleep(10ms) → readCanFrame(1000ms) → parseCanResponse → 驗證 ID=0x01005020 且 data[1]≠0x86</td><td><span class="badge badge-can">CAN</span></td></tr>
-  <tr><td>8</td><td>逐筆 log</td><td>每個參數寫入後記錄：<code>[ADDR] 參數名 = 值  ✓/✗</code>，方便追查失敗位址</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>6</td><td>UART 寫入</td><td><code>writeUartParam(addr, data)</code>：clearBuffer → write(buildUartWrite) → readUartFrame(1000ms) → parseUartResponse → 驗證功能碼 0x06/0x86 且位址回音相同（不符則再讀）→ 0x86 或回填值 ≠ 寫入值 → false（不重試）</td><td><span class="badge badge-uart">UART</span></td></tr>
+  <tr><td>7</td><td>CAN 寫入</td><td><code>writeCanParam(addr, data)</code>：clearBuffer → write(buildCanWrite) → sleep(10ms) → readCanFrame(1000ms) → parseCanResponse → 驗證 ID=0x01005020、data[1]=0x06、位址回音 data[2..3] 相同（0x86 錯誤幀位址在 data[3..4]）→ 回填值 data[4..5] 須 = 寫入值</td><td><span class="badge badge-can">CAN</span></td></tr>
+  <tr><td>8</td><td>逐筆 log</td><td>每個參數寫入後記錄：<code>[ADDR] 參數名 = 值  ✓/✗</code>，失敗時附原因（逾時、0x86 拒絕、回填值不符）</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>9</td><td>中止條件</td><td>累計失敗 ≥ 10 個位址時自動中止</td><td><span class="badge badge-both">兩者</span></td></tr>
-  <tr><td>10</td><td>Save 指令（UART）</td><td>寫入 <code>addr=0x0555, data=0x0001</code> → sleep(1000ms) → 讀回 0x0555，值=0 表示 Flash 寫入成功</td><td><span class="badge badge-uart">UART</span></td></tr>
-  <tr><td>11</td><td>Save 指令（CAN）</td><td>送出 Save → 確認 ACK → 送出 Reload（<code>data=0x0002</code>，令控制器重新從 Flash 載入） → sleep(1000ms) → 讀回 0x0555=0 確認成功</td><td><span class="badge badge-can">CAN</span></td></tr>
+  <tr><td>10</td><td>失敗確認</td><td>有任何地址寫入失敗時，先 confirm 是否仍要 SAVE，避免把不完整的參數組存進 Flash</td><td><span class="badge badge-both">兩者</span></td></tr>
+  <tr><td>11</td><td>Save 指令</td><td><code>runFlashCommand(1)</code>：寫入 <code>addr=0x0555, data=1</code>（回應須位址相符、非 0x86）→ 每 200ms 輪詢 0x0555，最多 5s：0 = 成功、1/2 = 進行中、其他非零 = 失敗；無回應判失敗。CAN 存檔成功後再以 <code>runFlashCommand(2)</code> 重載 Flash → RAM</td><td><span class="badge badge-both">兩者</span></td></tr>
   <tr><td>12</td><td>結束</td><td>進度條歸零，log 寫入結果，<code>busy=false</code></td><td><span class="badge badge-both">兩者</span></td></tr>
 </table>
 
@@ -358,7 +356,7 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
 </div>
 
 <h3>回應 RX（parseUartResponse）</h3>
-<p>格式相同 12 bytes；Byte 2 = <code>0x83</code> 表示讀取失敗，<code>0x86</code> 表示寫入失敗；CRC 驗證通過後取 Byte[6]&lt;&lt;8|Byte[7] 為資料值。</p>
+<p>格式相同 12 bytes；Byte 2 = 功能碼（<code>0x03</code>/<code>0x06</code>，錯誤時為 <code>0x83</code>/<code>0x86</code>），Byte 4~5 = 位址回音（錯誤時照回）；CRC 驗證通過後取 Byte[6]&lt;&lt;8|Byte[7] 為資料值。呼叫端以功能碼與位址回音判斷是否為本次請求的回應。</p>
 
 <h3>CRC 計算</h3>
 <table>
@@ -394,7 +392,7 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
   <tr><td><code>0x01</code></td><td><code>0x06</code> (Write)</td><td>addr_H</td><td>addr_L</td><td>data_H</td><td>data_L</td><td><code>0x00</code></td></tr>
 </table>
 
-<h3>Save 指令 TX（buildCanSave / buildCanReload）</h3>
+<h3>Save 指令 TX（buildCanWrite 寫入 0x0555）</h3>
 <table>
   <tr><th>指令</th><th>Data[2]</th><th>Data[3]</th><th>Data[4]</th><th>Data[5]</th><th>說明</th></tr>
   <tr><td>Save</td><td><code>0x05</code></td><td><code>0x55</code></td><td><code>0x00</code></td><td><code>0x01</code></td><td>寫入 addr=0x0555, data=1 → 儲存 Flash</td></tr>
@@ -405,10 +403,10 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
 <table>
   <tr><th>項目</th><th>說明</th></tr>
   <tr><td>有效 ID（讀/寫回應）</td><td><code>0x01005020</code>（LE）</td></tr>
-  <tr><td>成功讀取</td><td>data[1] ≠ 0x83；資料值 = <code>(data[4] &lt;&lt; 8) | data[5]</code></td></tr>
-  <tr><td>成功寫入</td><td>ID = 0x01005020 且 data[1] ≠ 0x86</td></tr>
+  <tr><td>成功讀取</td><td>data[1] = 0x03 且位址 <code>(data[2] &lt;&lt; 8) | data[3]</code> = 請求位址；資料值 = <code>(data[4] &lt;&lt; 8) | data[5]</code></td></tr>
+  <tr><td>成功寫入</td><td>data[1] = 0x06、位址相同，且回填值 data[4..5] = 寫入值（韌體回填實際生效值，可抓出截斷）</td></tr>
   <tr><td>錯誤碼 0x83</td><td>讀取失敗（位址不存在）</td></tr>
-  <tr><td>錯誤碼 0x86</td><td>寫入失敗</td></tr>
+  <tr><td>錯誤碼 0x86</td><td>寫入失敗；錯誤幀 data[2] = 例外碼、位址在 data[3..4]</td></tr>
 </table>
 
 <div class="note">CAN 模式每次 TX 後需等待 <strong>10ms</strong>（<code>sleep(10)</code>）再讀取回應，留出 Tool_R 轉接器處理時間。</div>
@@ -460,13 +458,11 @@ td code{background:#333;padding:1px 5px;border-radius:3px;font-family:var(--mono
   <tr><td><code>retryOp(n, fn)</code></td><td>app.js:596</td><td>最多 n 次重試，失敗間隔 15ms</td></tr>
   <tr><td><code>buildUartRead(addr)</code></td><td>protocol.js:20</td><td>建立 12-byte UART 讀取封包</td></tr>
   <tr><td><code>buildUartWrite(addr,data)</code></td><td>protocol.js:32</td><td>建立 12-byte UART 寫入封包</td></tr>
-  <tr><td><code>buildUartSave()</code></td><td>protocol.js:44</td><td>建立 UART Save 指令封包（addr=0x0555, data=1）</td></tr>
-  <tr><td><code>parseUartResponse(bytes)</code></td><td>protocol.js:58</td><td>解析 UART 回應，驗 CRC，回傳 {address, data} 或 {error}</td></tr>
+  <tr><td><code>parseUartResponse(bytes)</code></td><td>protocol.js:58</td><td>解析 UART 回應，驗 CRC，回傳 {func, address, data} 或 {error, func, address}（CRC 錯誤時只有 error）</td></tr>
   <tr><td><code>buildToolRPacket(id, data)</code></td><td>protocol.js:75</td><td>建立 15-byte Tool_R/CAN 封包</td></tr>
   <tr><td><code>buildCanRead(addr)</code></td><td>protocol.js:87</td><td>建立 CAN 讀取封包（ID=0x03002050）</td></tr>
   <tr><td><code>buildCanWrite(addr,data)</code></td><td>protocol.js:92</td><td>建立 CAN 寫入封包</td></tr>
-  <tr><td><code>buildCanSave()</code></td><td>protocol.js:97</td><td>建立 CAN Save 指令封包</td></tr>
-  <tr><td><code>buildCanReload()</code></td><td>protocol.js:102</td><td>建立 CAN Reload 指令封包</td></tr>
+  <tr><td><code>runFlashCommand(value)</code></td><td>app.js</td><td>寫 0x0555（1 = Save、2 = Reload）並輪詢至完成，回傳 {ok, msg}</td></tr>
   <tr><td><code>parseCanResponse(bytes)</code></td><td>protocol.js:108</td><td>解析 13-byte CAN 回應，回傳 {id, len, data}</td></tr>
   <tr><td><code>SerialManager.readUartFrame(ms)</code></td><td>serial.js:83</td><td>等待 0x3A...0x0D0A 完整 UART 幀</td></tr>
   <tr><td><code>SerialManager.readCanFrame(ms)</code></td><td>serial.js:142</td><td>等待 0xFA0D + 13-byte CAN 幀</td></tr>

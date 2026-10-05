@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.09</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.10</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.09</div>
-  <div class="cover-date">2026-09-30</div>
+  <div class="cover-ver">操作說明書 v1.5.10</div>
+  <div class="cover-date">2026-10-05</div>
 </div>
 
 <!-- TOC -->
@@ -708,6 +708,18 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.10</strong></td>
+      <td>2026-10-05</td>
+      <td>
+        <ul>
+          <li>讀寫回應一律驗證功能碼與位址回音（UART、CAN 皆同）；前一筆逾時後遲到的殘留回應會被略過，不再把別的位址的值或結果套到這一筆</li>
+          <li>寫入參數時比對控制器回填的實際生效值；與寫入值不同（例如被截斷）或裝置回 0x86 拒絕時判定失敗、log 附上原因，且不再重試</li>
+          <li>Save 改為輪詢 0x0555（最多 5 秒）：0 = 成功、1/2 = 進行中、其他值 = 失敗並顯示該值；Save 指令無回應時判定失敗（原本 CAN 會誤報「SAVE ok」）。CAN 改為存檔完成後才送 reLoad。log 會列出 Save / reLoad 指令的回應訊框與 0x0555 輪詢經過</li>
+          <li>有地址寫入失敗時，先跳出確認視窗再決定是否 Save，避免把不完整的參數組存進 Flash</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.09</strong></td>
       <td>2026-09-30</td>
       <td>
@@ -963,7 +975,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.09 &nbsp;｜&nbsp; 2026-09-30
+  Endex eBike Tool 操作說明書 v1.5.10 &nbsp;｜&nbsp; 2026-10-05
 </div>
 
 </div>
