@@ -516,6 +516,79 @@ function showResultModal(title, ok, lines) {
   document.getElementById('modalResult').style.display = 'flex';
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Write confirm modal
+// ─────────────────────────────────────────────────────────────
+
+let _writeConfirmResolve = null;
+
+/**
+ * sources: [{ key, title, origin, count, writable, warn?, current?, btnLabel }]
+ * One button per source (each names its action), plus 取消.
+ * Resolves with the chosen source key, or null on cancel / ×.
+ */
+function showWriteConfirmModal(sources, note) {
+  const wrap = document.getElementById('wcSources');
+  const btns = document.getElementById('wcButtons');
+  wrap.innerHTML = '';
+  btns.innerHTML = '';
+
+  sources.forEach(function(s) {
+    const box = document.createElement('div');
+    box.className = 'wc-src' + (s.current ? ' wc-current' : '');
+    const title = document.createElement('div');
+    title.className = 'wc-src-title';
+    title.textContent = s.title;
+    box.appendChild(title);
+    [['寫入來源', s.origin], ['參數', s.count + ' 個，實際寫入 ' + s.writable + ' 個']].forEach(function(pair) {
+      const line = document.createElement('div');
+      line.className = 'wc-src-line';
+      line.textContent = pair[0] + '：';
+      const b = document.createElement('b');
+      b.textContent = pair[1];
+      line.appendChild(b);
+      box.appendChild(line);
+    });
+    if (s.warn) {
+      const w = document.createElement('div');
+      w.className = 'wc-src-warn';
+      w.textContent = '⚠ ' + s.warn;
+      box.appendChild(w);
+    }
+    wrap.appendChild(box);
+
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + (s.current ? 'btn-primary' : 'btn-action');
+    btn.textContent = s.btnLabel;
+    btn.addEventListener('click', function() { closeWriteConfirm(s.key); });
+    btns.appendChild(btn);
+  });
+
+  const cancel = document.createElement('button');
+  cancel.className = 'btn';
+  cancel.textContent = '取消';
+  cancel.addEventListener('click', function() { closeWriteConfirm(null); });
+  btns.appendChild(cancel);
+
+  document.getElementById('wcNote').textContent = note || '';
+  document.getElementById('modalWriteConfirm').style.display = 'flex';
+  cancel.focus();   // Enter on open must not start a write
+  return new Promise(function(resolve) { _writeConfirmResolve = resolve; });
+}
+
+function closeWriteConfirm(result) {
+  document.getElementById('modalWriteConfirm').style.display = 'none';
+  if (_writeConfirmResolve) { _writeConfirmResolve(result); _writeConfirmResolve = null; }
+}
+
+function initWriteConfirmModal() {
+  document.querySelector('[data-close="modalWriteConfirm"]')
+    .addEventListener('click', function() { closeWriteConfirm(null); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && _writeConfirmResolve) closeWriteConfirm(null);
+  });
+}
+
 function initResultModal() {
   document.querySelectorAll('[data-close="modalResult"]').forEach(function(btn) {
     btn.addEventListener('click', function() {

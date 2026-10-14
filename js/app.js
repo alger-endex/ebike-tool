@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.13';
+const APP_VERSION = 'v1.5.14';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -653,10 +653,59 @@ document.getElementById('btnRead').addEventListener('click', () => performRead()
 // ─────────────────────────────────────────────────────────────
 //  Write parameters to device
 // ─────────────────────────────────────────────────────────────
+/** 寫入確認視窗用：說明主/副列表目前的值從哪裡來。 */
+function describeListOrigin(source, fileName, fallback) {
+  if (source === 'import') return `匯入 Config（${fileName}）`;
+  if (source === 'read')   return '從裝置讀取';
+  return fallback;
+}
+
 document.getElementById('btnWrite').addEventListener('click', async () => {
   if (!state.serial.isOpen) { alert('請先開啟序列埠'); return; }
   if (!state.hrList.length)  { alert('請先載入 parameter.ini'); return; }
   if (state.busy) return;
+
+  // ── 寫入前確認來源（在任何裝置通訊之前，取消時不碰裝置）────────
+  // UART skips first 4 items (SIG), CAN writes all
+  const startIdx = state.isCAN ? 0 : 4;
+  const countWritable = (lst) => lst.slice(startIdx).filter(item => {
+    const hr = state.hrList.find(h => h.address === item.address);
+    return !hr?.production && item.address > 0x0020;
+  }).length;
+  const filterNote = state.isCAN
+    ? '※ 不寫入：address ≤ 0x0020、production 參數'
+    : '※ 不寫入：SIG/SIN 序號（前 4 筆）、address ≤ 0x0020、production 參數';
+
+  const srcInfo = {
+    hr: {
+      key: 'hr', list: state.hrList,
+      title: '主：畫面上的參數值',
+      origin: describeListOrigin(state.hrListSource, state.fileName1, '參數表預設值'),
+      warn: state.hrListSource === null ? '尚未從裝置讀取或匯入 Config，寫入的會是參數表的預設值' : null,
+    },
+    para: {
+      key: 'para', list: state.paraList,
+      title: '副：比較參數',
+      origin: describeListOrigin(state.paraListSource, state.fileName2, '（無資料）'),
+      warn: state.paraList.length === 0 ? '比較參數沒有資料，沒有可寫入的值' : null,
+    },
+  };
+  // 勾選「顯示比較參數」時寫入的是副列表；兩份筆數不同時才讓使用者改選主列表
+  const shown = state.showPara
+    ? (state.paraList.length !== state.hrList.length ? ['para', 'hr'] : ['para'])
+    : ['hr'];
+  const current = shown[0];
+  const choice = await showWriteConfirmModal(shown.map(k => {
+    const s = srcInfo[k];
+    const writable = countWritable(s.list);
+    return { ...s, count: s.list.length, writable, current: k === current,
+             btnLabel: `寫入${k === 'hr' ? '主' : '副'}參數 (${writable} 個)` };
+  }), filterNote + (state.showPara && shown.length === 1
+    ? '\n※ 目前勾選「顯示比較參數」，寫入的是副列表；要寫入主列表請先取消勾選'
+    : ''));
+  if (!choice) { log('已取消寫入'); return; }
+  const list = srcInfo[choice].list;
+  log(`寫入來源：${srcInfo[choice].title}（${srcInfo[choice].origin}，可寫入 ${countWritable(list)} 個）`);
 
   setBusy(true);
 
@@ -670,7 +719,7 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
       return;
     }
     const devSig   = devRead.sig;
-    const sigSource = (state.showPara && state.paraList.length >= 4) ? state.paraList : state.hrList;
+    const sigSource = (choice === 'para' && state.paraList.length >= 4) ? state.paraList : state.hrList;
     const localSig = decodeSig(sigSource);
     if (devSig !== localSig) {
       log('❌ SIG 不符：裝置="' + devSig + '"  本機="' + localSig + '"，中止寫入');
@@ -681,31 +730,6 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
   }
   // ────────────────────────────────────────────────────────────
 
-  // 決定寫入來源清單
-  // UART skips first 4 items (SIG), CAN writes all
-  const startIdx = state.isCAN ? 0 : 4;
-  const countWritable = (lst) => lst.slice(startIdx).filter(item => {
-    const hr = state.hrList.find(h => h.address === item.address);
-    return !hr?.production && item.address > 0x0020;
-  }).length;
-
-  const filterNote = state.isCAN
-    ? '※ 可寫入已排除：address ≤ 0x0020、production 參數'
-    : '※ 可寫入已排除：SIG/SIN 序號（前 4 筆）、address ≤ 0x0020、production 參數';
-
-  let list = state.showPara ? state.paraList : state.hrList;
-  if (state.showPara && state.paraList.length !== state.hrList.length) {
-    const wLocal  = countWritable(state.hrList);
-    const wImport = countWritable(state.paraList);
-    const useLocal = confirm(
-      `匯入 Config 有 ${state.paraList.length} 個參數，本機有 ${state.hrList.length} 個參數。\n\n` +
-      `確定 → 本機（${state.hrList.length} 個，可寫入 ${wLocal} 個）\n` +
-      `取消 → 匯入 Config（${state.paraList.length} 個，可寫入 ${wImport} 個）\n\n` +
-      filterNote
-    );
-    list = useLocal ? state.hrList : state.paraList;
-    log('寫入來源：' + (useLocal ? `本機 (${state.hrList.length} 個，可寫入 ${wLocal} 個)` : `匯入 Config (${state.paraList.length} 個，可寫入 ${wImport} 個)`));
-  }
   const failed   = [];
   let   count    = 0;
 
@@ -2447,6 +2471,7 @@ document.getElementById('btnBurn').addEventListener('click', async () => {
 initSetbitModal();
 initConfigModal();
 initResultModal();
+initWriteConfirmModal();
 
 // Show version
 document.getElementById('appVersion').textContent = APP_VERSION;

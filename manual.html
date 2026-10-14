@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.13</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.14</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.13</div>
+  <div class="cover-ver">操作說明書 v1.5.14</div>
   <div class="cover-date">2026-10-14</div>
 </div>
 
@@ -430,7 +430,7 @@ Key_production=False</pre>
 <h1 id="s6">寫入裝置參數</h1>
 <div class="steps">
   <div class="step"><div class="step-num">1</div><div class="step-body">在各頁籤中修改參數數值（直接輸入或使用 SetBit 視窗）。</div></div>
-  <div class="step"><div class="step-num">2</div><div class="step-body">點擊動作列「<strong>寫入參數</strong>」。</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">點擊動作列「<strong>寫入參數</strong>」，跳出「確認寫入參數」視窗，顯示這次寫入的是<strong>主</strong>（畫面上的參數值）還是<strong>副</strong>（勾選「顯示比較參數」時的比較參數），以及值的來源（從裝置讀取、匯入 Config 的檔名，或參數表預設值）與實際寫入筆數。確認無誤後按「寫入主／副參數」；主、副筆數不同時兩個都會列出，可擇一寫入。按「取消」或 <kbd>Esc</kbd> 則不與裝置通訊。</div></div>
   <div class="step"><div class="step-num">3</div><div class="step-body">工具逐一寫入標記為 <code>Writeable=True</code> 且位址 &gt; 0x0020 的參數。</div></div>
   <div class="step"><div class="step-num">4</div><div class="step-body">全部寫入後自動執行 <strong>SAVE</strong>；CAN 模式額外執行 <strong>RELOAD</strong>。</div></div>
   <div class="step"><div class="step-num">5</div><div class="step-body">狀態記錄顯示「寫入完成」。</div></div>
@@ -712,6 +712,17 @@ Key_production=False</pre>
     <tr><th style="width:70px">版本</th><th style="width:96px">日期</th><th>主要修改項目</th></tr>
   </thead>
   <tbody>
+    <tr>
+      <td><strong>v1.5.14</strong></td>
+      <td>2026-10-14</td>
+      <td>
+        <ul>
+          <li>寫入參數前新增「確認寫入參數」視窗：清楚標示這次寫入的是主（畫面上的參數值）或副（勾選「顯示比較參數」時的比較參數），並顯示值的來源（從裝置讀取／匯入 Config 檔名／參數表預設值）與實際寫入筆數；尚未讀取或匯入時以 ⚠ 提醒將寫入預設值。取消或按 <kbd>Esc</kbd> 不與裝置通訊</li>
+          <li>主、副筆數不同時，原本以「確定＝本機、取消＝匯入 Config」的瀏覽器對話框選擇來源，改為按鈕直接標明「寫入主參數 (N 個)」「寫入副參數 (N 個)」，避免選錯；開啟時焦點停在「取消」，誤按 Enter 不會開始寫入</li>
+          <li>修正選擇寫入主列表時，寫入前 SIG 驗證仍以副列表的 SIG 比對的問題</li>
+        </ul>
+      </td>
+    </tr>
     <tr>
       <td><strong>v1.5.13</strong></td>
       <td>2026-10-14</td>
@@ -1011,7 +1022,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.13 &nbsp;｜&nbsp; 2026-10-14
+  Endex eBike Tool 操作說明書 v1.5.14 &nbsp;｜&nbsp; 2026-10-14
 </div>
 
 </div>
