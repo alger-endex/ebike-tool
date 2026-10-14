@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.11</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.12</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.11</div>
-  <div class="cover-date">2026-10-05</div>
+  <div class="cover-ver">操作說明書 v1.5.12</div>
+  <div class="cover-date">2026-10-13</div>
 </div>
 
 <!-- TOC -->
@@ -274,6 +274,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <h2 id="s2-4">主要區域（參數頁籤）</h2>
 <p>由 <code>page.ini</code> 動態產生的頁籤，每個頁籤對應一組參數。點擊頁籤名稱切換顯示。</p>
 <p>每列參數包含：<strong>名稱</strong>、<strong>數值輸入框</strong>（或「位元設定」按鈕）、<strong>單位</strong>、<strong>十六進位核取方塊</strong>。</p>
+<p>數值輸入後按 <kbd>Enter</kbd> 或離開欄位即套用。未勾 Hex 時只接受整數；勾選 Hex 時接受 <code>0–9 A–F</code>（可加 <code>0x</code> 前綴）。格式錯誤或超出該參數上下限的值不會套用，輸入框會還原為原值並在下方顯示原因。</p>
 
 <h2 id="s2-5">底部狀態列</h2>
 <table>
@@ -578,7 +579,11 @@ Key_production=False</pre>
 </div>
 
 <h2 id="s12-3">讀取 DRV FW &amp; 狀態</h2>
-<p>點擊「<strong>🔍 讀取 DRV FW &amp; 狀態</strong>」，向裝置查詢目前執行模式與韌體版本（無燒錄動作）。</p>
+<p>點擊「<strong>🔍 讀取 DRV FW &amp; 狀態</strong>」，向裝置查詢目前執行模式與韌體版本（無燒錄動作）。連線後即可使用，不需先載入 HEX 檔。查詢指令所帶的 SIG 來源：</p>
+<ul>
+  <li><strong>已載入 HEX 檔</strong>：使用 HEX 檔第一行的 SIG，同時驗證此 HEX 是否適用於這台裝置（不符時裝置不回應）。</li>
+  <li><strong>未載入 HEX 檔</strong>：先向裝置讀取 SIG0~SIG3 取得 SIG。若裝置停在 Bootloader 而無法讀取參數，狀態記錄會提示改為載入 HEX 檔後再檢查。</li>
+</ul>
 <table>
   <tr><th>狀態記錄顯示</th><th>說明</th></tr>
   <tr><td>✅ Bootloader（可燒錄）</td><td>裝置在 Bootloader 模式，可直接執行燒錄</td></tr>
@@ -707,6 +712,19 @@ Key_production=False</pre>
     <tr><th style="width:70px">版本</th><th style="width:96px">日期</th><th>主要修改項目</th></tr>
   </thead>
   <tbody>
+    <tr>
+      <td><strong>v1.5.12</strong></td>
+      <td>2026-10-13</td>
+      <td>
+        <ul>
+          <li>修正十六進位輸入：勾選 Hex 後輸入含 A–F 的值（如 <code>FF</code>、<code>33A0</code>）原本會被忽略、輸入框卻仍顯示新值，現已可正確解析</li>
+          <li>數值輸入改為「拒絕並還原」：格式錯誤（如小數 <code>125.5</code>）或超出上下限的值不再被自動截斷 / 夾到邊界，而是還原為編輯前的值，於輸入框下方與狀態記錄顯示原因</li>
+          <li>按鈕依連線與作業狀態自動停用：未連線時停用讀取 / 寫入 / Driver Status / 馬達校正 / 燒錄；UART 模式停用僅限 CAN 的功能；連線中鎖定通道、Protocol、Baud；讀寫或燒錄進行中鎖定匯入、機種切換、INI 載入等操作。停用時滑鼠停留可看到原因</li>
+          <li>讀寫參數、燒錄、馬達校正進行中關閉或重新整理頁面時，瀏覽器會先跳出確認</li>
+          <li>「🔍 讀取 DRV FW &amp; 狀態」不再需要先載入 HEX 檔：未載入時改為先向裝置讀取 SIG0~SIG3 作為查詢 SIG；已載入 HEX 時沿用 HEX 檔的 SIG（兼驗證 HEX 與裝置是否相符）。寫入參數前的 SIG 驗證與此共用同一讀取流程</li>
+        </ul>
+      </td>
+    </tr>
     <tr>
       <td><strong>v1.5.11</strong></td>
       <td>2026-10-05</td>
@@ -984,7 +1002,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.11 &nbsp;｜&nbsp; 2026-10-05
+  Endex eBike Tool 操作說明書 v1.5.12 &nbsp;｜&nbsp; 2026-10-13
 </div>
 
 </div>

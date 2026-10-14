@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.11';
+const APP_VERSION = 'v1.5.12';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -37,6 +37,7 @@ const state = {
   bleSerial: new BleManager(),
   serial:    null,   // active channel — set at boot and on channel change
   busy: false,
+  connecting: false,   // true while btnOpen's open() is in flight (BLE chooser / port picker)
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -55,11 +56,66 @@ function setProgress(pct, label = '') {
 
 function setBusy(busy) {
   state.busy = busy;
-  ['btnRead', 'btnWrite', 'btnOpen'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = busy;
-  });
+  updateUiState();
 }
+
+// True while a device operation is running (read/write, burn or FW check,
+// calibration) — used to lock the UI and to warn before leaving the page.
+function isOperationRunning() {
+  return state.busy || state.connecting || burnState.burning || calRunning;
+}
+
+// Single place that derives every connection/operation-dependent control's
+// enabled state. A disabled control's title explains why; the original
+// title is kept in data-title-orig and restored when it is re-enabled.
+function updateUiState() {
+  const isBle     = document.getElementById('selChannel').value === 'ble';
+  const supported = isBle ? !!navigator.bluetooth : !!navigator.serial;
+  const connected = !!(state.serial && state.serial.isOpen);
+  const running   = isOperationRunning();
+
+  const setCtl = (id, disabled, reason) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.dataset.titleOrig === undefined) el.dataset.titleOrig = el.title || '';
+    el.disabled = disabled;
+    el.title = disabled && reason ? reason : el.dataset.titleOrig;
+  };
+  const busyMsg = '作業進行中，請稍候';
+  const connMsg = '請先開啟連線';
+
+  setCtl('btnOpen',  !supported || connected || running,
+    !supported ? '此瀏覽器不支援' + (isBle ? ' Web Bluetooth' : ' Web Serial') : connected ? '已連線' : busyMsg);
+  setCtl('btnClose', !connected || running, running ? busyMsg : '尚未連線');
+  ['selChannel', 'selProtocol', 'selBaudrate'].forEach(id =>
+    setCtl(id, connected || running, connected ? '連線中無法變更，請先關閉連線' : busyMsg));
+
+  setCtl('btnRead',  !connected || running, running ? busyMsg : connMsg);
+  setCtl('btnWrite', !connected || running, running ? busyMsg : connMsg);
+
+  const canMsg = !connected ? connMsg : running ? busyMsg : '僅支援 CAN 模式';
+  ['btnDriverStatus', 'btnCalibrate', 'btnCalTrigger'].forEach(id =>
+    setCtl(id, !connected || !state.isCAN || running, canMsg));
+
+  ['btnImport', 'btnConfig', 'selModel', 'btnReloadIni', 'btnClearIniCache',
+   'btnLoadPageIni', 'btnLoadParamIni'].forEach(id => setCtl(id, running, busyMsg));
+
+  // Burn buttons: while burning, setBurnBusy() owns btnBurn (it becomes the stop button)
+  if (!burnState.burning) {
+    const hasFile = burnState.lines.length > 0;
+    const reason  = !hasFile ? '請先載入 HEX 檔' : !connected ? connMsg : busyMsg;
+    setCtl('btnBurn',    !hasFile || !connected || running, reason);
+    setCtl('btnCheckFw', !connected || running, !connected ? connMsg : busyMsg);
+  }
+  setCtl('btnLoadHex', running, busyMsg);
+}
+
+// Warn before closing/reloading the page mid-operation (write, burn, calibration)
+window.addEventListener('beforeunload', (e) => {
+  if (!isOperationRunning()) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
 
 // ─────────────────────────────────────────────────────────────
 //  Serial port  ─  Open / Close
@@ -82,6 +138,8 @@ document.getElementById('btnOpen').addEventListener('click', async () => {
     const stopBits = parseFloat(document.getElementById('selStopBits').value);
     const parity   = document.getElementById('selParity').value;
 
+    state.connecting = true;
+    updateUiState();
     if (protocol === 'CAN') {
       const canBaud = baudRate === 9600 ? 460800 : baudRate;
       await state.serial.open({ baudRate: canBaud, dataBits, stopBits, parity });
@@ -115,6 +173,9 @@ document.getElementById('btnOpen').addEventListener('click', async () => {
     }
     log('❌ ' + hint);
     alert(hint);
+  } finally {
+    state.connecting = false;
+    updateUiState();
   }
 });
 
@@ -130,6 +191,7 @@ function setDot(connected) {
   const dot = document.getElementById('statusDot');
   dot.classList.toggle('connected',    connected);
   dot.classList.toggle('disconnected', !connected);
+  updateUiState();
 
   const bleInfo = document.getElementById('bleInfo');
   if (!bleInfo) return;
@@ -601,22 +663,13 @@ document.getElementById('btnWrite').addEventListener('click', async () => {
   // ── 寫入前驗證：讀取裝置 SIG0~SIG3 與本機比對 ──────────────
   if (state.hrList.length >= 4) {
     log('驗證裝置 SIG...');
-    const devSigItems = [];
-    for (let i = 0; i < 4; i++) {
-      const val = await retryOp(3, () =>
-        state.isCAN
-          ? readCanParam(state.hrList[i].address)
-          : readUartParam(state.hrList[i].address),
-        () => state.isCAN && lastCanReadRejected
-      );
-      if (val === null || val === false) {
-        log('❌ SIG' + i + ' 讀取失敗，中止寫入');
-        setBusy(false);
-        return;
-      }
-      devSigItems.push({ data: val });
+    const devRead = await readDeviceSig();
+    if (devRead.sig === null) {
+      log('❌ SIG' + devRead.failedIdx + ' 讀取失敗，中止寫入');
+      setBusy(false);
+      return;
     }
-    const devSig   = decodeSig(devSigItems);
+    const devSig   = devRead.sig;
     const sigSource = (state.showPara && state.paraList.length >= 4) ? state.paraList : state.hrList;
     const localSig = decodeSig(sigSource);
     if (devSig !== localSig) {
@@ -945,6 +998,22 @@ function logFlashResult(label, r) {
 }
 
 /** stopIf()：失敗後回傳 true 則不再重試（例如裝置明確拒絕，重試結果必然相同）。 */
+// Reads SIG0~SIG3 from the device and decodes the 8-char SIG string.
+// Returns { sig } on success, or { sig: null, failedIdx } on the first register that fails.
+async function readDeviceSig() {
+  const items = [];
+  for (let i = 0; i < 4; i++) {
+    const addr = state.hrList.length >= 4 ? state.hrList[i].address : i;
+    const val = await retryOp(3, () =>
+      state.isCAN ? readCanParam(addr) : readUartParam(addr),
+      () => state.isCAN && lastCanReadRejected
+    );
+    if (val === null || val === false) return { sig: null, failedIdx: i };
+    items.push({ data: val });
+  }
+  return { sig: decodeSig(items) };
+}
+
 async function retryOp(maxRetries, fn, stopIf = null) {
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -1878,8 +1947,9 @@ function setBurnBusy(busy) {
     btn.classList.remove('btn-burn-stop');
     btn.disabled = !hasFile;
   }
-  document.getElementById('btnCheckFw').disabled = busy || !hasFile;
+  document.getElementById('btnCheckFw').disabled = busy;
   document.getElementById('btnLoadHex').disabled = busy;
+  updateUiState();
 }
 
 function setBurnProgress(pct, label = '') {
@@ -1903,11 +1973,6 @@ document.getElementById('btnLoadHex').addEventListener('click', () => {
   input.click();
 });
 
-function burnEnableFileButtons(enabled) {
-  document.getElementById('btnCheckFw').disabled = !enabled;
-  document.getElementById('btnBurn').disabled    = !enabled;
-}
-
 function burnLoadFile(text, fileName) {
   const raw = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const lines = [];
@@ -1926,7 +1991,7 @@ function burnLoadFile(text, fileName) {
   document.getElementById('hexFileInfo').textContent  =
     (burnState.newVersion ? '新版本: ' + burnState.newVersion + '  ' : '') +
     lines.length + ' 行  ' + size + ' bytes';
-  burnEnableFileButtons(true);
+  updateUiState();
   setBurnProgress(0);
   log('已載入 HEX: ' + fileName + (burnState.newVersion ? '  新版本: ' + burnState.newVersion : ''));
 }
@@ -2230,14 +2295,29 @@ async function burnFlashCan(sig) {
 
 document.getElementById('btnCheckFw').addEventListener('click', async () => {
   if (!state.serial.isOpen) { alert('請先開啟序列埠'); return; }
-  if (!burnState.lines.length) { alert('請先載入 HEX 檔案'); return; }
 
   setBurnBusy(true);
   log('--- Check Firmware ---');
   try {
-    const sig = burnGetSig(burnState.lines[0], !state.isCAN);
-    if (!sig) { log('❌ SIG 解析失敗：HEX 檔第一行格式不符'); return; }
-    log('SIG: ' + Array.from(sig).map(b => String.fromCharCode(b)).join(''));
+    // SIG source: the loaded HEX (also verifies the HEX matches the device),
+    // otherwise SIG0~SIG3 read from the device itself.
+    let sig;
+    if (burnState.lines.length) {
+      sig = burnGetSig(burnState.lines[0], !state.isCAN);
+      if (!sig) { log('❌ SIG 解析失敗：HEX 檔第一行格式不符'); return; }
+      log('SIG（HEX 檔）: ' + Array.from(sig).map(b => String.fromCharCode(b)).join(''));
+    } else {
+      const dev = await readDeviceSig();
+      if (dev.sig === null || dev.sig.length !== 8) {
+        log('❌ 無法讀取裝置 SIG' + (dev.sig === null ? dev.failedIdx : '') +
+            '（裝置可能停在 Bootloader），請載入 HEX 檔後再檢查');
+        return;
+      }
+      log('SIG（裝置）: ' + dev.sig);
+      // Same byte order as burnGetSig(): UART takes the SIG reversed, CAN as-is
+      const s = state.isCAN ? dev.sig : dev.sig.split('').reverse().join('');
+      sig = new Uint8Array(s.split('').map(c => c.charCodeAt(0)));
+    }
     const result = await burnCheckFirmware(sig);
     const label = result === 0 ? '✅ Bootloader（可燒錄）'
                 : result === 1 ? '✅ App（正常運行中）'
@@ -2363,6 +2443,7 @@ function applyChannelSelection(channel) {
     log('⚠ BLE 連線意外中斷');
   };
   state.bleSerial._onLog = (msg) => log(msg);
+  updateUiState();
 }
 
 document.getElementById('selChannel').addEventListener('change', (e) => {
@@ -2406,9 +2487,7 @@ if (!navigator.bluetooth) {
   document.getElementById('statusLog').value +=
     '⚠ 此瀏覽器不支援 Web Bluetooth API。BLE 通道無法使用。\n請使用 Chrome 或 Edge 並以 https:// 開啟。\n';
 }
-if (!navigator.serial && !navigator.bluetooth) {
-  document.getElementById('btnOpen').disabled = true;
-}
+updateUiState();
 
 // ── 桌機版：讓收合按鈕跟隨 sidebar 右邊緣 ──
 function updateSbTogglePos() {

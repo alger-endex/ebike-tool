@@ -110,6 +110,11 @@ function buildParamRow(item, idx, onParamChange, onSetBitClick) {
     valueEl = document.createElement('input');
     valueEl.type = 'text';
     valueEl.dataset.idx = idx;
+    valueEl.addEventListener('focus', function() {
+      valueEl.dataset.prev = valueEl.value;   // restored when the commit is rejected
+      clearInputError(item);
+    });
+    valueEl.addEventListener('input', function() { clearInputError(item); });
     valueEl.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') commitInput(item, idx, valueEl.value, onParamChange);
     });
@@ -122,6 +127,12 @@ function buildParamRow(item, idx, onParamChange, onSetBitClick) {
   }
   valWrap.appendChild(valueEl);
   item.valueEl = valueEl;
+  if (item.writeable) {
+    const errEl = document.createElement('span');
+    errEl.className = 'param-err';
+    valWrap.appendChild(errEl);
+    item.errEl = errEl;
+  }
 
   const unitEl = document.createElement('span');
   unitEl.className   = 'param-unit';
@@ -163,15 +174,50 @@ function clearImportDiffHighlight(state) {
   applyImportDiffHighlight(state, new Set(), new Set());
 }
 
+// Validates the typed text for the row's current Dec/Hex mode. Invalid or
+// out-of-range input is rejected (never silently truncated or clamped): the
+// field reverts to its value before editing and an inline error is shown.
 function commitInput(item, idx, rawValue, onParamChange) {
-  if (!rawValue || rawValue.trim() === '') return;
+  const s = (rawValue || '').trim();
   const isHex = item.hexChkEl && item.hexChkEl.checked;
-  const val = isNaN(rawValue) ? NaN : (isHex ? parseInt(rawValue, 16) : parseInt(rawValue, 10));
-  if (isNaN(val)) return;
-  const clamped = Math.max(item.lowerBound, Math.min(item.upperBound, val));
-  item.data = clamped;
+  if (s === '') { rejectInput(item, null); return; }
+
+  const formatOk = isHex ? /^(0x)?[0-9a-f]+$/i.test(s) : /^-?\d+$/.test(s);
+  if (!formatOk) {
+    rejectInput(item, isHex ? '只接受 16 進位（0–9、A–F）' : '只接受整數');
+    return;
+  }
+  const val = parseInt(s.replace(/^0x/i, ''), isHex ? 16 : 10);
+  if (val < item.lowerBound || val > item.upperBound) {
+    rejectInput(item, (isHex ? '0x' + s.replace(/^0x/i, '').toUpperCase() + ' = ' + val + '，' : '') +
+      '超出範圍 ' + item.lowerBound + '–' + item.upperBound);
+    return;
+  }
+
+  item.data = val;
+  item.valueEl.dataset.prev = isHex
+    ? (val & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')
+    : val.toString();
   refreshParamDisplay(item);
-  if (onParamChange) onParamChange(idx, clamped);
+  if (onParamChange) onParamChange(idx, val);
+}
+
+function rejectInput(item, msg) {
+  const el = item.valueEl;
+  if (el.dataset.prev !== undefined) el.value = el.dataset.prev;
+  if (!msg) return;
+  el.classList.add('input-error');
+  if (item.errEl) item.errEl.textContent = msg;
+  if (typeof log === 'function') {
+    const addr = item.address.toString(16).toUpperCase().padStart(4, '0');
+    log('⚠ [' + addr + '] ' + item.name + '：' + msg + '，已還原');
+  }
+}
+
+function clearInputError(item) {
+  if (!item.valueEl) return;
+  item.valueEl.classList.remove('input-error');
+  if (item.errEl) item.errEl.textContent = '';
 }
 
 // ─────────────────────────────────────────────────────────────

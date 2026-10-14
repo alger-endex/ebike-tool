@@ -463,6 +463,26 @@ body.log-collapsed .sb-toggle {
 }
 .param-val-wrap input[type="text"]:focus { outline: none; border-color: var(--accent); }
 .param-val-wrap input[type="text"].out-of-range { border-color: var(--danger); }
+.param-val-wrap input[type="text"].input-error  { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
+
+/* Inline commit error — floats under the input so the row grid is unaffected */
+.param-val-wrap { position: relative; }
+.param-err:empty { display: none; }
+.param-err {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  margin-top: 2px;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 /* showPara 來源標記 */
 .val-from-para     { color: var(--accent) !important; }
