@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.12';
+const APP_VERSION = 'v1.5.13';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -2031,6 +2031,28 @@ async function burnCheckFirmware(sig) {
   }
 }
 
+/**
+ * 比對 HEX 檔 SIG 與裝置 SIG0~SIG3。App 模式的韌體回應 check_fw 時不驗 SIG，
+ * 所以 HEX 與裝置是否相符必須由這裡另外確認。
+ * Returns 'match' | 'mismatch' | 'unknown'（讀不到裝置 SIG，例如停在 Bootloader）。
+ */
+async function verifyHexSigWithDevice() {
+  // Readable order (no UART reversal), same form as decodeSig()
+  const hexSig = Array.from(burnGetSig(burnState.lines[0], false))
+    .map(b => String.fromCharCode(b)).join('');
+  const dev = await readDeviceSig();
+  if (dev.sig === null || dev.sig.length !== 8) {
+    log('⚠ 無法讀取裝置 SIG（裝置可能停在 Bootloader），略過 HEX / 裝置 SIG 比對');
+    return 'unknown';
+  }
+  log('SIG（裝置）: ' + dev.sig);
+  if (dev.sig !== hexSig) {
+    log(`❌ SIG 不符：HEX 檔為 ${hexSig}，裝置為 ${dev.sig}，此 HEX 不適用於這台裝置`);
+    return 'mismatch';
+  }
+  return 'match';
+}
+
 async function burnJumpToBootLoader(sig) {
   try {
     state.serial.clearBuffer();
@@ -2299,13 +2321,18 @@ document.getElementById('btnCheckFw').addEventListener('click', async () => {
   setBurnBusy(true);
   log('--- Check Firmware ---');
   try {
-    // SIG source: the loaded HEX (also verifies the HEX matches the device),
+    // SIG source: the loaded HEX (checked against the device's SIG0~SIG3),
     // otherwise SIG0~SIG3 read from the device itself.
     let sig;
     if (burnState.lines.length) {
       sig = burnGetSig(burnState.lines[0], !state.isCAN);
       if (!sig) { log('❌ SIG 解析失敗：HEX 檔第一行格式不符'); return; }
-      log('SIG（HEX 檔）: ' + Array.from(sig).map(b => String.fromCharCode(b)).join(''));
+      log('SIG（HEX 檔）: ' + Array.from(burnGetSig(burnState.lines[0], false))
+        .map(b => String.fromCharCode(b)).join(''));
+      if (await verifyHexSigWithDevice() === 'mismatch') {
+        log('結果: ❌ HEX 與裝置 SIG 不符');
+        return;
+      }
     } else {
       const dev = await readDeviceSig();
       if (dev.sig === null || dev.sig.length !== 8) {
@@ -2363,7 +2390,13 @@ document.getElementById('btnBurn').addEventListener('click', async () => {
       log('❌ SIG 解析失敗：HEX 檔第一行格式不符 (@@<SIG8>v<VV>.<vv>)');
       return;
     }
-    log('SIG: ' + Array.from(sig).map(b => String.fromCharCode(b)).join(''));
+    log('SIG（HEX 檔）: ' + Array.from(burnGetSig(burnState.lines[0], false))
+      .map(b => String.fromCharCode(b)).join(''));
+    // 讀不到裝置 SIG（停在 Bootloader）時仍允許燒錄，以便救回燒錄中斷的裝置
+    if (await verifyHexSigWithDevice() === 'mismatch') {
+      log('❌ 燒錄中止：HEX 與裝置 SIG 不符');
+      return;
+    }
 
     const burnMode = document.getElementById('selBurnMode').value;
     const versionState = await burnCheckFirmware(sig);
