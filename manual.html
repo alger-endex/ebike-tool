@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.14</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.15</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.14</div>
-  <div class="cover-date">2026-10-14</div>
+  <div class="cover-ver">操作說明書 v1.5.15</div>
+  <div class="cover-date">2026-10-15</div>
 </div>
 
 <!-- TOC -->
@@ -713,6 +713,16 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.15</strong></td>
+      <td>2026-10-15</td>
+      <td>
+        <ul>
+          <li>BLE 模式「開始燒錄」及載入 HEX 後的 Check Firmware 不再讀取裝置 SIG0~SIG3 與 HEX 比對：BLE 橋接器（ESP32）收到 CAN ID 0x03002050 的參數命令後會啟動 CAN ID 過濾，導致後續 check_fw（0xB2/0xB3）無回應。COM 埠（UART / CAN）維持原本的 SIG 比對</li>
+          <li>BLE 模式未載入 HEX 時按 Check Firmware，改為提示先載入 HEX 檔（不再讀取裝置 SIG）</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.14</strong></td>
       <td>2026-10-14</td>
       <td>
@@ -1022,7 +1032,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.14 &nbsp;｜&nbsp; 2026-10-14
+  Endex eBike Tool 操作說明書 v1.5.15 &nbsp;｜&nbsp; 2026-10-15
 </div>
 
 </div>

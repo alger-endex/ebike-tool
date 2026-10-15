@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.14';
+const APP_VERSION = 'v1.5.15';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -2061,6 +2061,13 @@ async function burnCheckFirmware(sig) {
  * Returns 'match' | 'mismatch' | 'unknown'（讀不到裝置 SIG，例如停在 Bootloader）。
  */
 async function verifyHexSigWithDevice() {
+  // BLE bridge (ESP32) enables a CAN ID filter once it sees a 0x03002050
+  // param command, which then drops the 0xB2/0xB3 burn frames — so over BLE
+  // the device SIG is not read here.
+  if (state.serial === state.bleSerial) {
+    log('BLE 模式：略過讀取裝置 SIG0~SIG3 比對（避免觸發 ESP32 CAN ID 過濾）');
+    return 'unknown';
+  }
   // Readable order (no UART reversal), same form as decodeSig()
   const hexSig = Array.from(burnGetSig(burnState.lines[0], false))
     .map(b => String.fromCharCode(b)).join('');
@@ -2357,6 +2364,10 @@ document.getElementById('btnCheckFw').addEventListener('click', async () => {
         log('結果: ❌ HEX 與裝置 SIG 不符');
         return;
       }
+    } else if (state.serial === state.bleSerial) {
+      // Reading SIG0~SIG3 over BLE would trigger the ESP32 CAN ID filter (see verifyHexSigWithDevice)
+      log('❌ BLE 模式不讀取裝置 SIG，請先載入 HEX 檔後再檢查');
+      return;
     } else {
       const dev = await readDeviceSig();
       if (dev.sig === null || dev.sig.length !== 8) {
