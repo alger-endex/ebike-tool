@@ -295,6 +295,73 @@ body.log-collapsed .sb-toggle {
   cursor: pointer;
   font-size: 12px;
 }
+.ts-status {
+  --ts-color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 6px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg3);
+}
+.ts-status.ok     { --ts-color: var(--success); }
+.ts-status.none   { --ts-color: var(--danger); }
+.ts-status.silent { --ts-color: var(--warn); }
+.ts-status.ok, .ts-status.none, .ts-status.silent {
+  border-color: var(--ts-color);
+  background: color-mix(in srgb, var(--ts-color) 14%, var(--bg3));
+}
+.ts-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ts-color);
+}
+.ts-status.ok .ts-dot { animation: ts-pulse 1.2s ease-in-out infinite; }
+@keyframes ts-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent); }
+  50%      { box-shadow: 0 0 0 4px transparent; }
+}
+.ts-status-text { flex: 1; min-width: 0; color: var(--ts-color); }
+.ts-status.ok #tsStatusText,
+.ts-status.none #tsStatusText,
+.ts-status.silent #tsStatusText { font-weight: 600; font-size: 12px; }
+.ts-status-sub { display: block; font-size: 10px; color: var(--text-dim); }
+.ts-status-sub:empty { display: none; }
+.ts-status.flash { animation: ts-flash .6s ease-out 2; }
+@keyframes ts-flash {
+  50% { background: color-mix(in srgb, var(--ts-color) 40%, var(--bg3)); }
+}
+.ts-status .btn-tiny:disabled { opacity: .4; cursor: not-allowed; }
+.ts-toast {
+  --ts-color: var(--success);
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 12px 20px;
+  border: 2px solid var(--ts-color);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--ts-color) 22%, var(--bg2));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .5);
+  cursor: pointer;
+  animation: ts-toast-in .25s ease-out;
+}
+.ts-toast[hidden] { display: none; }
+.ts-toast.none   { --ts-color: var(--danger); }
+.ts-toast.silent { --ts-color: var(--warn); }
+.ts-toast-title { font-size: 16px; font-weight: 700; color: var(--ts-color); }
+.ts-toast-sub { margin-top: 4px; font-family: var(--mono); font-size: 12px; color: var(--text); }
+@keyframes ts-toast-in {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
 .field-row {
   display: flex;
   align-items: center;

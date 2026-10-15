@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.15</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.16</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.15</div>
+  <div class="cover-ver">操作說明書 v1.5.16</div>
   <div class="cover-date">2026-10-15</div>
 </div>
 
@@ -713,6 +713,19 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.16</strong></td>
+      <td>2026-10-15</td>
+      <td>
+        <ul>
+          <li>側邊欄「裝置監控」新增力矩感測器功能（CAN only）：狀態列顯示是否收到力矩感測器廣播 CAN ID 0x18F50133（🟢 有訊號／🔴 訊號斷訊／🟡 已靜默），附「偵測」按鈕僅監聽 bus、不送命令</li>
+          <li>CAN 連線（COM / BLE）成功後自動偵測力矩感測器，畫面上方跳出提醒：收到訊號顯示「✔ 偵測到力矩感測器訊號」，未收到顯示「✖ 力矩感測器訊號斷訊」</li>
+          <li>新增「🔇 力矩感測器 靜默 (F0)」：直接送出總線命令 0x08F20020 D0=0xF0，之後每輪監聽 300 ms（BLE 500 ms）自動偵測直到無訊號，最多 10 秒，顯示約幾 ms 後停止廣播；10 秒內仍有訊號則提示靜默未生效</li>
+          <li>新增「🔊 力矩感測器 恢復 (F1)」：送出 0x08F20020 D0=0xF1 後監聽一次，確認感測器恢復廣播</li>
+          <li>讀取 DRV FW &amp; 狀態／燒錄的 CAN check_fw（等 0xB3）與 Jump to BootLoader（等 0xB5）改為略過其他 CAN ID 的訊框繼續等待，避免力矩感測器、電池等廣播先到而誤判「ID錯誤」；逾時時 log 列出期間略過的 CAN ID</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.15</strong></td>
       <td>2026-10-15</td>
       <td>
@@ -1032,7 +1045,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.15 &nbsp;｜&nbsp; 2026-10-15
+  Endex eBike Tool 操作說明書 v1.5.16 &nbsp;｜&nbsp; 2026-10-15
 </div>
 
 </div>

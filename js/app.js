@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.15';
+const APP_VERSION = 'v1.5.16';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -94,7 +94,7 @@ function updateUiState() {
   setCtl('btnWrite', !connected || running, running ? busyMsg : connMsg);
 
   const canMsg = !connected ? connMsg : running ? busyMsg : '僅支援 CAN 模式';
-  ['btnDriverStatus', 'btnCalibrate', 'btnCalTrigger'].forEach(id =>
+  ['btnDriverStatus', 'btnCalibrate', 'btnCalTrigger', 'btnTsDetect', 'btnTsSilent', 'btnTsResume'].forEach(id =>
     setCtl(id, !connected || !state.isCAN || running, canMsg));
 
   ['btnImport', 'btnConfig', 'selModel', 'btnReloadIni', 'btnClearIniCache',
@@ -177,6 +177,8 @@ document.getElementById('btnOpen').addEventListener('click', async () => {
     state.connecting = false;
     updateUiState();
   }
+  // CAN (COM or BLE): check for the torque sensor right after connecting (listen only, sends nothing)
+  if (state.serial.isOpen && state.isCAN) await tsDetect(true);
 });
 
 document.getElementById('btnClose').addEventListener('click', async () => {
@@ -188,6 +190,7 @@ document.getElementById('btnClose').addEventListener('click', async () => {
 });
 
 function setDot(connected) {
+  if (!connected) setTsStatus('unknown');
   const dot = document.getElementById('statusDot');
   dot.classList.toggle('connected',    connected);
   dot.classList.toggle('disconnected', !connected);
@@ -1842,6 +1845,166 @@ document.getElementById('btnCalTrigger').addEventListener('click', async () => {
   }
 });
 
+// ── Torque sensor bus command (0x08F20020 D0=F0/F1) ──
+// The sensor broadcasts 0x18F50133 (D0=0xFF) on its own; seeing that frame on
+// the bus is taken as proof the sensor is fitted. Both commands are sent
+// straight away; after Silent (F0) the bus is polled until the broadcast
+// stops, after Resume (F1) it is listened to once to confirm it is back.
+
+/** Listen for torque sensor broadcasts for `ms`. Returns { count, last } (last = data bytes or null). */
+async function tsListen(ms) {
+  state.serial.clearBuffer();
+  const deadline = Date.now() + ms;
+  let count = 0, last = null;
+  for (let left = ms; left > 0; left = deadline - Date.now()) {
+    const frame = await state.serial.readCanFrame(left);
+    if (!frame) break;
+    const r = parseCanResponse(frame);
+    if (r && r.id === TORQUE_SENSOR_RX && r.len >= 8 && r.data[0] === 0xFF) { count++; last = r.data; }
+  }
+  return { count, last };
+}
+
+function tsDescribe(d) {
+  const torque = ((d[4] >> 6) << 8) | d[2];
+  const temp   = d[1] <= 210 ? (d[1] - 30) + '°C' : '—';
+  return `Torque=${torque}  Cadence=${d[3]}  Temp=${temp}`;
+}
+
+function tsListenMs() {
+  // BLE bridge batches notifications, so allow a longer window
+  return state.serial === state.bleSerial ? 1500 : 1000;
+}
+
+/**
+ * Sidebar torque sensor status. kind: 'unknown' (not checked / disconnected),
+ * 'ok' (broadcast received), 'none' (nothing received), 'silent' (silenced by F0).
+ */
+function setTsStatus(kind, detail = '') {
+  const text = { unknown: '未偵測', ok: '✔ 有訊號', none: '✖ 訊號斷訊', silent: '⏸ 已靜默' }[kind];
+  const box = document.getElementById('tsStatus');
+  box.className = 'ts-status' + (kind === 'unknown' ? '' : ' ' + kind);
+  document.getElementById('tsStatusText').textContent = '力矩感測器：' + text;
+  document.getElementById('tsStatusSub').textContent = kind === 'unknown' ? '' :
+    [detail, new Date().toLocaleTimeString('zh-TW', { hour12: false })].filter(Boolean).join('  ');
+  if (kind !== 'unknown') {
+    void box.offsetWidth;   // restart the flash animation on every update
+    box.classList.add('flash');
+  }
+}
+
+function tsCheckReady() {
+  if (!state.isCAN) { alert('僅支援 CAN 模式\n請先選擇 CAN 並開啟序列埠'); return false; }
+  if (!state.serial.isOpen) { alert('請先開啟序列埠'); return false; }
+  return true;
+}
+
+let tsToastTimer = null;
+
+/** Pop-up banner at the top of the page; click to dismiss, auto-hides after 5 s. */
+function showTsToast(kind, title, sub) {
+  const el = document.getElementById('tsToast');
+  el.className = 'ts-toast ' + kind;
+  document.getElementById('tsToastTitle').textContent = title;
+  document.getElementById('tsToastSub').textContent = sub;
+  el.hidden = false;
+  clearTimeout(tsToastTimer);
+  tsToastTimer = setTimeout(() => { el.hidden = true; }, 5000);
+}
+document.getElementById('tsToast').addEventListener('click', (e) => { e.currentTarget.hidden = true; });
+
+/** Listen for the torque sensor broadcast and update the sidebar status. auto = run on connect. */
+async function tsDetect(auto = false) {
+  const ms = tsListenMs();
+  setBusy(true);
+  try {
+    if (auto) log(`偵測力矩感測器廣播 0x18F50133（${ms} ms）...`);
+    const r = await tsListen(ms);
+    if (r.count) {
+      setTsStatus('ok', `(${r.count} 筆)`);
+      log(`✓ 力矩感測器 0x18F50133：${ms} ms 內收到 ${r.count} 筆  ${tsDescribe(r.last)}`);
+      showTsToast('ok', '✔ 偵測到力矩感測器訊號', `0x18F50133  ${ms} ms 內收到 ${r.count} 筆  ${tsDescribe(r.last)}`);
+    } else {
+      setTsStatus('none');
+      log(`✖ 力矩感測器訊號斷訊：0x18F50133 ${ms} ms 內未收到（未接、或已靜默）`);
+      showTsToast('none', '✖ 力矩感測器訊號斷訊', `0x18F50133  ${ms} ms 內未收到（未接、或已靜默）`);
+    }
+  } catch (e) {
+    log('力矩感測器偵測失敗: ' + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+document.getElementById('btnTsDetect').addEventListener('click', () => {
+  if (tsCheckReady()) tsDetect();
+});
+
+/**
+ * After F0: keep listening in short windows until one window passes with no
+ * 0x18F50133 frame (sensor has gone silent), or give up after TS_SILENT_TIMEOUT_MS.
+ */
+const TS_SILENT_TIMEOUT_MS = 10000;
+
+async function tsWaitSilent(sentAt) {
+  // Window must comfortably exceed the broadcast period (~15 ms) plus BLE notify batching
+  const win = state.serial === state.bleSerial ? 500 : 300;
+  log(`自動偵測力矩感測器，直到無訊號（每輪 ${win} ms，最多 ${TS_SILENT_TIMEOUT_MS / 1000} 秒）...`);
+  let total = 0, last = null;
+  while (Date.now() - sentAt < TS_SILENT_TIMEOUT_MS) {
+    const r = await tsListen(win);
+    if (!r.count) {
+      // Sensor stopped somewhere before this empty window began
+      const stopMs = Date.now() - sentAt - win;
+      setTsStatus('silent');
+      if (total) {
+        log(`✅ 力矩感測器已靜默：送出後約 ${stopMs} ms 停止廣播（停止前收到 ${total} 筆）`);
+        showTsToast('silent', '⏸ 力矩感測器已靜默', `送出 F0 後約 ${stopMs} ms 停止廣播 0x18F50133`);
+      } else {
+        log('✅ 送出後未收到任何 0x18F50133（已靜默，或未接力矩感測器）');
+        showTsToast('silent', '⏸ 力矩感測器無訊號', '送出 F0 後未收到 0x18F50133（已靜默，或未接感測器）');
+      }
+      return;
+    }
+    total += r.count;
+    last = r.last;
+    setTsStatus('ok', `(靜默中… ${total} 筆)`);
+  }
+  setTsStatus('ok', `(${total} 筆)`);
+  log(`⚠ 送出 F0 後 ${TS_SILENT_TIMEOUT_MS / 1000} 秒內仍持續收到 0x18F50133（${total} 筆），靜默未生效  ${tsDescribe(last)}`);
+  showTsToast('none', '⚠ 力矩感測器靜默未生效', `送出 F0 後 ${TS_SILENT_TIMEOUT_MS / 1000} 秒內仍收到 ${total} 筆 0x18F50133`);
+}
+
+async function tsRunBusCmd(cmd) {
+  if (!tsCheckReady()) return;
+  const silent = cmd === TS_BUS_SILENT;
+  const label  = silent ? '靜默 (F0)' : '恢復 (F1)';
+  const ms     = tsListenMs();
+  setBusy(true);
+  try {
+    log(`--- 力矩感測器 ${label} ---`);
+    await state.serial.write(buildTorqueSensorBusCmd(cmd));
+    const sentAt = Date.now();
+    log(`已送出總線命令 0x08F20020 D0=0x${cmd.toString(16).toUpperCase()}`);
+    if (silent) {
+      await tsWaitSilent(sentAt);
+      return;
+    }
+    await sleep(100);
+    const after = await tsListen(ms);
+    setTsStatus(after.count ? 'ok' : 'none', after.count ? `(${after.count} 筆)` : '');
+    log(after.count ? `✅ 力矩感測器已恢復廣播：${after.count} 筆  ${tsDescribe(after.last)}`
+                    : `⚠ 送出後 ${ms} ms 內未收到 0x18F50133（感測器可能未接或尚未恢復）`);
+  } catch (e) {
+    log(`力矩感測器 ${label} 失敗: ` + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+document.getElementById('btnTsSilent').addEventListener('click', () => tsRunBusCmd(TS_BUS_SILENT));
+document.getElementById('btnTsResume').addEventListener('click', () => tsRunBusCmd(TS_BUS_RESUME));
+
 document.querySelectorAll('[data-close="modalCalibrate"]').forEach(btn => {
   btn.addEventListener('click', () => {
     document.getElementById('modalCalibrate').style.display = 'none';
@@ -2022,6 +2185,25 @@ function burnLoadFile(text, fileName) {
 
 // ── Helpers ───────────────────────────────────────────────
 
+/**
+ * Read CAN frames until one with `id` arrives or `timeoutMs` runs out, skipping
+ * frames with other IDs (e.g. torque sensor / battery broadcasts that share the bus).
+ * Returns { r, skipped } — r = parseCanResponse() result or null on timeout,
+ * skipped = IDs of the frames passed over.
+ */
+async function readCanFrameById(id, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  const skipped = [];
+  for (let left = timeoutMs; left > 0; left = deadline - Date.now()) {
+    const frame = await state.serial.readCanFrame(left);
+    if (!frame) break;
+    const r = parseCanResponse(frame);
+    if (r && r.id === id) return { r, skipped };
+    if (r) skipped.push(r.id);
+  }
+  return { r: null, skipped };
+}
+
 async function burnCheckFirmware(sig) {
   // Returns 0=bootloader, 1=app, 2=error/timeout
   try {
@@ -2029,10 +2211,11 @@ async function burnCheckFirmware(sig) {
     if (state.isCAN) {
       await state.serial.write(buildBurnCanCheckFw(sig));
       await sleep(1);
-      const frame = await state.serial.readCanFrame(3000);
-      if (!frame) { log('check_Firmware: 無回應'); return 2; }
-      const r = parseCanResponse(frame);
-      if (!r || r.id !== 0x000000B3) { log('check_Firmware: ID錯誤 ' + (r ? '0x' + r.id.toString(16) : 'null')); return 2; }
+      const { r, skipped } = await readCanFrameById(0x000000B3, 3000);
+      if (!r) {
+        log('check_Firmware: 無回應' + (skipped.length ? `（期間略過 ${describeCanSkips(skipped, 0)}）` : ''));
+        return 2;
+      }
       const execState = r.data[0] + r.data[1];
       const major = r.data[2] | (r.data[3] << 8);
       const minor = r.data[4] | (r.data[5] << 8);
@@ -2090,10 +2273,11 @@ async function burnJumpToBootLoader(sig) {
     log('Jump to BootLoader...');
     if (state.isCAN) {
       await state.serial.write(buildBurnCanJumpBoot(sig));
-      const frame = await state.serial.readCanFrame(5000);
-      if (!frame) { log('Jump to BootLoader: 無回應'); return false; }
-      const r = parseCanResponse(frame);
-      if (!r || r.id !== 0x000000B5) { log('Jump to BootLoader: ID錯誤'); return false; }
+      const { r, skipped } = await readCanFrameById(0x000000B5, 5000);
+      if (!r) {
+        log('Jump to BootLoader: 無回應' + (skipped.length ? `（期間略過 ${describeCanSkips(skipped, 0)}）` : ''));
+        return false;
+      }
       if (r.data[0] !== 0x30) { log('Jump to BootLoader: 狀態錯誤 0x' + r.data[0].toString(16)); return false; }
     } else {
       await state.serial.write(buildBurnUartJumpBoot(sig));

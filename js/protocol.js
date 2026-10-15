@@ -119,6 +119,20 @@ const DRV_RX_ASSIST   = 0x10215030;
 const DRV_RX_DISTANCE = 0x10225030;
 
 // ─────────────────────────────────────────────────────────────
+//  Torque Sensor  (CAN only)
+// ─────────────────────────────────────────────────────────────
+
+// Periodic broadcast from the torque sensor (no request needed); D0 is always 0xFF
+const TORQUE_SENSOR_RX = 0x18F50133;
+// Bus command: D0 = 0xF0 bus silent (stop broadcasting) / 0xF1 resume; D1~D7 reserved 0
+const TORQUE_SENSOR_BUS_CMD_TX = 0x08F20020;
+const TS_BUS_SILENT = 0xF0;
+const TS_BUS_RESUME = 0xF1;
+function buildTorqueSensorBusCmd(cmd) {
+  return buildToolRPacket(TORQUE_SENSOR_BUS_CMD_TX, [cmd & 0xFF, 0, 0, 0, 0, 0, 0, 0]);
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Motor Calibration  (CAN only)
 // ─────────────────────────────────────────────────────────────
 
