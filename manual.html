@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.17</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.18</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,7 +111,7 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.17</div>
+  <div class="cover-ver">操作說明書 v1.5.18</div>
   <div class="cover-date">2026-10-16</div>
 </div>
 
@@ -713,6 +713,19 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.18</strong></td>
+      <td>2026-10-16</td>
+      <td>
+        <ul>
+          <li>BLE-CAN 燒錄判讀 ACK 時跳過橋接器轉送的 CAN 訊框（0xFA 0x0D 開頭 15 bytes），避免其中的 0xF1 被誤當成 ACK／NAK</li>
+          <li>BLE-CAN 燒錄 Chunk error 的 log 附上位置與實際收到的 ACK bytes（例：<code>offset 248, ACK: F1 02 31 00</code>），方便判斷錯誤來源</li>
+          <li>「偵測到力矩感測器自動靜默」每次連線只做一次：確認靜默後，同一連線內再偵測到感測器（如燒錄後恢復 F1、手動偵測）不再自動靜默；斷線後重置</li>
+          <li>燒錄方式隨通道自動切換：Channel 選 BLE → BLE-CAN、封包 248 bytes；選 COMPORT → 標準（之後仍可手動變更）</li>
+          <li>修正以內嵌預設值載入 parameter.ini 時，log 與檔名顯示為「(未載入)」的問題</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.17</strong></td>
       <td>2026-10-16</td>
       <td>
@@ -1055,7 +1068,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.17 &nbsp;｜&nbsp; 2026-10-16
+  Endex eBike Tool 操作說明書 v1.5.18 &nbsp;｜&nbsp; 2026-10-16
 </div>
 
 </div>

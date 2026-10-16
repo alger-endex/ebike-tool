@@ -356,6 +356,26 @@ function buildBurnBleCanChunk(chunkBytes) {
   return p;
 }
 
+/**
+ * Locate a 4-byte BLE-CAN line ACK (0xF1 ...) in the RX buffer, skipping whole
+ * 0xFA 0x0D Tool_R CAN frames (bus broadcasts forwarded by the bridge) so a
+ * 0xF1 byte inside one of them is never taken for an ACK.
+ * Returns the ACK's start index, or -1 if no complete ACK is buffered yet.
+ */
+function findBleCanAckStart(buf) {
+  let i = 0;
+  while (i < buf.length) {
+    if (buf[i] === 0xFA && (i + 1 >= buf.length || buf[i + 1] === 0x0D)) {
+      if (buf.length < i + 15) return -1;   // CAN frame (or its header) still arriving
+      i += 15;
+      continue;
+    }
+    if (buf[i] === 0xF1) return buf.length >= i + 4 ? i : -1;
+    i++;
+  }
+  return -1;
+}
+
 /** Parse 4-byte BLE-CAN line ACK. Returns 'ok', 'nak', or 'timeout'. */
 function parseBurnBleCanLineAck(bytes) {
   if (!bytes || bytes.length < 4) return 'timeout';

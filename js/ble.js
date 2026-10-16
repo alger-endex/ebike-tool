@@ -315,11 +315,11 @@ class BleManager {
   }
 
   readBurnBleCanLineAck(timeoutMs = 3000) {
+    // findBleCanAckStart() skips forwarded 0xFA 0x0D CAN frames, so a 0xF1 inside one is not an ACK
     return this._waitFor((buf) => {
-      const start = buf.indexOf(0xF1);
-      if (start < 0) return -1;
-      return buf.length >= start + 4 ? start + 3 : -1;
-    }, timeoutMs, 0xF1);
+      const start = findBleCanAckStart(buf);
+      return start < 0 ? -1 : start + 3;
+    }, timeoutMs, findBleCanAckStart);
   }
 
   _waitFor(matcher, timeoutMs, startByte) {
@@ -329,7 +329,9 @@ class BleManager {
         const endIdx = matcher(this._rxBuf);
         if (endIdx >= 0) {
           let startIdx = 0;
-          if (startByte !== null) {
+          if (typeof startByte === 'function') {
+            startIdx = Math.max(0, startByte(this._rxBuf));
+          } else if (startByte !== null) {
             startIdx = this._rxBuf.indexOf(startByte);
             if (startIdx < 0) startIdx = 0;
           } else {

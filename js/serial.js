@@ -127,11 +127,11 @@ class SerialManager {
    * Returns Uint8Array(4) or null on timeout.
    */
   readBurnBleCanLineAck(timeoutMs = 3000) {
+    // findBleCanAckStart() skips forwarded 0xFA 0x0D CAN frames, so a 0xF1 inside one is not an ACK
     return this._waitFor((buf) => {
-      const start = buf.indexOf(0xF1);
-      if (start < 0) return -1;
-      return buf.length >= start + 4 ? start + 3 : -1;
-    }, timeoutMs, 0xF1);
+      const start = findBleCanAckStart(buf);
+      return start < 0 ? -1 : start + 3;
+    }, timeoutMs, findBleCanAckStart);
   }
 
   /**
@@ -193,7 +193,9 @@ class SerialManager {
         if (endIdx >= 0) {
           // Find start position
           let startIdx = 0;
-          if (startByte !== null) {
+          if (typeof startByte === 'function') {
+            startIdx = Math.max(0, startByte(this._rxBuf));
+          } else if (startByte !== null) {
             startIdx = this._rxBuf.indexOf(startByte);
             if (startIdx < 0) startIdx = 0;
           } else {

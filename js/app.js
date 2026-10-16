@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.17';
+const APP_VERSION = 'v1.5.18';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -190,7 +190,7 @@ document.getElementById('btnClose').addEventListener('click', async () => {
 });
 
 function setDot(connected) {
-  if (!connected) setTsStatus('unknown');
+  if (!connected) { setTsStatus('unknown'); tsAutoSilentDone = false; }
   const dot = document.getElementById('statusDot');
   dot.classList.toggle('connected',    connected);
   dot.classList.toggle('disconnected', !connected);
@@ -306,7 +306,10 @@ async function autoLoadIni() {
   }
   if (paramText) {
     state.hrList = parseParameterIni(paramText);
-    const paramName = paramFromFetch ? paramFile : (localStorage.getItem(lsParamNameKey(model)) || paramFile);
+    // Fetched or embedded text is always MODEL_FILES[model]; only a cache hit uses the stored name
+    // (which may be a stale '(未載入)' placeholder left by an earlier failed load).
+    const paramName = (paramFromFetch || paramFromEmbedded) ? paramFile
+                    : (localStorage.getItem(lsParamNameKey(model)) || paramFile);
     setParamIniName(paramName, model);
     const src = paramFromFetch ? '檔案' : (paramFromEmbedded ? '內嵌預設值' : '快取');
     log('parameter.ini 載入 (' + src + ': ' + paramName + ') → ' + state.hrList.length + ' 個參數');
@@ -1927,6 +1930,10 @@ chkTsAutoSilent.addEventListener('change', () => {
   try { localStorage.setItem(LS_TS_AUTO_SILENT, chkTsAutoSilent.checked ? '1' : '0'); } catch {}
 });
 
+// Auto silent runs only once per connection: set when it has confirmed the sensor
+// went silent, cleared on disconnect (setDot(false)).
+let tsAutoSilentDone = false;
+
 async function tsDetect(auto = false) {
   const ms = tsListenMs();
   let found = false;
@@ -1950,8 +1957,12 @@ async function tsDetect(auto = false) {
     setBusy(false);
   }
   if (found && chkTsAutoSilent.checked && state.serial.isOpen) {
-    log('已勾選「偵測到力矩感測器自動靜默」→ 自動送出靜默 (F0)');
-    await tsRunBusCmd(TS_BUS_SILENT);
+    if (tsAutoSilentDone) {
+      log('本次連線已自動靜默過一次，不再自動靜默（需要時請按「靜默 (F0)」）');
+    } else {
+      log('已勾選「偵測到力矩感測器自動靜默」→ 自動送出靜默 (F0)');
+      if (await tsRunBusCmd(TS_BUS_SILENT)) tsAutoSilentDone = true;
+    }
   }
 }
 
@@ -1965,6 +1976,7 @@ document.getElementById('btnTsDetect').addEventListener('click', () => {
  */
 const TS_SILENT_TIMEOUT_MS = 10000;
 
+/** Returns true once the broadcast has stopped, false if it was still running at the timeout. */
 async function tsWaitSilent(sentAt) {
   // Window must comfortably exceed the broadcast period (~15 ms) plus BLE notify batching
   const win = state.serial === state.bleSerial ? 500 : 300;
@@ -1983,7 +1995,7 @@ async function tsWaitSilent(sentAt) {
         log('✅ 送出後未收到任何 0x18F50133（已靜默，或未接力矩感測器）');
         showTsToast('silent', '⏸ 力矩感測器無訊號', '送出 F0 後未收到 0x18F50133（已靜默，或未接感測器）');
       }
-      return;
+      return true;
     }
     total += r.count;
     last = r.last;
@@ -1992,6 +2004,7 @@ async function tsWaitSilent(sentAt) {
   setTsStatus('ok', `(${total} 筆)`);
   log(`⚠ 送出 F0 後 ${TS_SILENT_TIMEOUT_MS / 1000} 秒內仍持續收到 0x18F50133（${total} 筆），靜默未生效  ${tsDescribe(last)}`);
   showTsToast('none', '⚠ 力矩感測器靜默未生效', `送出 F0 後 ${TS_SILENT_TIMEOUT_MS / 1000} 秒內仍收到 ${total} 筆 0x18F50133`);
+  return false;
 }
 
 async function tsRunBusCmd(cmd) {
@@ -2006,8 +2019,7 @@ async function tsRunBusCmd(cmd) {
     const sentAt = Date.now();
     log(`已送出總線命令 0x08F20020 D0=0x${cmd.toString(16).toUpperCase()}`);
     if (silent) {
-      await tsWaitSilent(sentAt);
-      return;
+      return await tsWaitSilent(sentAt);
     }
     await sleep(100);
     const after = await tsListen(ms);
@@ -2442,7 +2454,7 @@ async function burnFlashBleCan(sig) {
           break;
         } else if (result === 'nak') {
           if (chunkRetryCnt >= 3) { log('Still fail after retry 3 times, aborted.'); return false; }
-          log('Chunk error, retry...');
+          log(`Chunk error, retry...  (offset ${i}, ACK: ${hexBytes(ack)})`);
           chunkRetry = true;
         } else {
           chunkCount++;
@@ -2717,6 +2729,11 @@ function applyChannelSelection(channel) {
   // Show/hide comport-specific params
   const params = document.getElementById('serialParams');
   if (params) params.style.display = isBle ? 'none' : 'contents';
+  // Burn mode follows the channel: BLE → BLE-CAN with 248-byte chunks, COM port → standard.
+  // Still changeable by hand afterwards.
+  document.getElementById('selBurnMode').value = isBle ? 'blecan' : 'uart';
+  if (isBle) document.getElementById('selBleChunk').value = '248';
+  applyBurnModeSelection(document.getElementById('selBurnMode').value);
   // Wire up BLE unexpected-disconnect handler (set once; no-op for comport)
   state.bleSerial.onDisconnect = () => {
     setDot(false);
