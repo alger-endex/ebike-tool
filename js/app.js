@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.16';
+const APP_VERSION = 'v1.5.17';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -1914,13 +1914,28 @@ function showTsToast(kind, title, sub) {
 document.getElementById('tsToast').addEventListener('click', (e) => { e.currentTarget.hidden = true; });
 
 /** Listen for the torque sensor broadcast and update the sidebar status. auto = run on connect. */
+// "Auto silent" checkbox: once a detection sees the sensor, send F0 straight away.
+// Checked by default; the user's last choice is remembered per browser (a
+// convenience only — falls back to checked when nothing is stored).
+const LS_TS_AUTO_SILENT = 'endex_ts_auto_silent';
+const chkTsAutoSilent = document.getElementById('chkTsAutoSilent');
+try {
+  const saved = localStorage.getItem(LS_TS_AUTO_SILENT);
+  if (saved !== null) chkTsAutoSilent.checked = saved === '1';
+} catch {}
+chkTsAutoSilent.addEventListener('change', () => {
+  try { localStorage.setItem(LS_TS_AUTO_SILENT, chkTsAutoSilent.checked ? '1' : '0'); } catch {}
+});
+
 async function tsDetect(auto = false) {
   const ms = tsListenMs();
+  let found = false;
   setBusy(true);
   try {
     if (auto) log(`偵測力矩感測器廣播 0x18F50133（${ms} ms）...`);
     const r = await tsListen(ms);
     if (r.count) {
+      found = true;
       setTsStatus('ok', `(${r.count} 筆)`);
       log(`✓ 力矩感測器 0x18F50133：${ms} ms 內收到 ${r.count} 筆  ${tsDescribe(r.last)}`);
       showTsToast('ok', '✔ 偵測到力矩感測器訊號', `0x18F50133  ${ms} ms 內收到 ${r.count} 筆  ${tsDescribe(r.last)}`);
@@ -1933,6 +1948,10 @@ async function tsDetect(auto = false) {
     log('力矩感測器偵測失敗: ' + e.message);
   } finally {
     setBusy(false);
+  }
+  if (found && chkTsAutoSilent.checked && state.serial.isOpen) {
+    log('已勾選「偵測到力矩感測器自動靜默」→ 自動送出靜默 (F0)');
+    await tsRunBusCmd(TS_BUS_SILENT);
   }
 }
 
@@ -2650,6 +2669,14 @@ document.getElementById('btnBurn').addEventListener('click', async () => {
 
     const jumpOk = await burnJumpToApp(sig);
     if (!jumpOk) log('⚠ Jump to App 失敗（燒錄已完成但無法驗證）');
+
+    // Ask the torque sensor to resume once the new firmware is up. Sent whenever
+    // checked: the page can't know whether the sensor was silenced (F0 may have
+    // been sent before a reload or by another tool), and F1 is harmless otherwise.
+    if (jumpOk && state.isCAN && document.getElementById('chkTsResumeAfterBurn').checked) {
+      log('已勾選「燒錄完成後恢復力矩感測器」→ 自動送出恢復 (F1)');
+      await tsRunBusCmd(TS_BUS_RESUME);
+    }
 
   } catch (e) {
     log('❌ Burn 異常: ' + e.message + '  耗時: ' + burnElapsed());

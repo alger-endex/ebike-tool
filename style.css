@@ -337,6 +337,8 @@ body.log-collapsed .sb-toggle {
   50% { background: color-mix(in srgb, var(--ts-color) 40%, var(--bg3)); }
 }
 .ts-status .btn-tiny:disabled { opacity: .4; cursor: not-allowed; }
+.ts-auto-silent { margin: 6px 0 4px; font-size: 11px; }
+.ts-auto-silent:has(input:checked) { color: var(--warn); font-weight: 600; }
 .ts-toast {
   --ts-color: var(--success);
   position: fixed;
