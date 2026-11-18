@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endex eBike Tool — 操作說明書 v1.5.18</title>
+<title>Endex eBike Tool — 操作說明書 v1.5.19</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,8 +111,8 @@ kbd{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;border-bott
 <div class="cover">
   <div class="cover-logo">Endex eBike Tool</div>
   <div class="cover-sub">電動自行車控制器參數設定工具</div>
-  <div class="cover-ver">操作說明書 v1.5.18</div>
-  <div class="cover-date">2026-10-16</div>
+  <div class="cover-ver">操作說明書 v1.5.19</div>
+  <div class="cover-date">2026-11-18</div>
 </div>
 
 <!-- TOC -->
@@ -713,6 +713,18 @@ Key_production=False</pre>
   </thead>
   <tbody>
     <tr>
+      <td><strong>v1.5.19</strong></td>
+      <td>2026-11-18</td>
+      <td>
+        <ul>
+          <li>通訊方式與機種自動對齊：選 UART 時機種自動切到「UART (ENEBDV01/11)」並載入 <code>parameter_ENEBDV01.ini</code>；選回 CAN 時切回標準 CAN；選機種時（未連線）通訊方式跟著設定。此前機種預設為標準 CAN，選 UART 連線後畫面仍是 CAN 線的參數說明，0x0200 等欄位的說明與 UART 韌體不符，要等完整讀取一次才會自動切換</li>
+          <li>UART 設定檔依韌體（Dev_EndexUART <code>mc_parameter.c</code>）全面校對：0x0350 改為位元設定並更正說明（bit0 平方律、bit1 滿段全電流、bit4 起步電流乘段位，原說明是 CAN 線舊語意）；0x0370／0x0371 低電量降載改為 0 關閉／1 依 SOC／2 依電壓（原寫 one step / slope / BMS）；0x0400 更正感測器型別（2／3 為 UART／CAN 塔基扭力，UART 線不支援，移除不存在的 0x0F）</li>
+          <li>UART 設定檔單位與上下限更正：0x0202 輪徑單位 inch、0x0203 單位 0.1 rpm、0x0362 單位 W；0x0260 上限由 1 改 65535（預設值 300 原本會被判超範圍）；0x0112／0x0113／0x0357／0x0359 上限改為韌體夾限（1kW 值，說明註明 500W 夾限）；0x0117 下限 30；0x0121–0x0124 上限 2000</li>
+          <li>UART 設定檔補上說明：0x0108 方向位元明確為 bit4／bit5、0x0200 v2.55 位元重排的舊設定換算、0x0204 與 0x0200 bit2 的關係、0x0360 需 0x02A1 bit2 才生效、0x0361／0x0362／0x0260 目前韌體未使用、0x0410、0x0422</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><strong>v1.5.18</strong></td>
       <td>2026-10-16</td>
       <td>
@@ -1068,7 +1080,7 @@ Key_production=False</pre>
 </table>
 
 <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:12px">
-  Endex eBike Tool 操作說明書 v1.5.18 &nbsp;｜&nbsp; 2026-10-16
+  Endex eBike Tool 操作說明書 v1.5.19 &nbsp;｜&nbsp; 2026-11-18
 </div>
 
 </div>
