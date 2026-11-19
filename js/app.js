@@ -11,7 +11,7 @@
 
 // All dependencies loaded via <script> tags in index.html
 
-const APP_VERSION = 'v1.5.18';
+const APP_VERSION = 'v1.5.19';
 
 // ─────────────────────────────────────────────────────────────
 //  Application state
@@ -221,7 +221,10 @@ function checkSigProtocolMatch() {
   log(`設定${proto}  匯入 "${sig}"  與通訊${match ? '相符' : '不符'}!`);
 }
 
-document.getElementById('selProtocol').addEventListener('change', checkSigProtocolMatch);
+document.getElementById('selProtocol').addEventListener('change', async () => {
+  await alignModelToProtocol();
+  checkSigProtocolMatch();
+});
 
 // ─────────────────────────────────────────────────────────────
 //  INI file loading  (auto + manual + localStorage cache)
@@ -254,6 +257,45 @@ const MODEL_LABELS = {
 
 function currentModel() {
   return document.getElementById('selModel')?.value || '';
+}
+
+/** 'UART' or 'CAN' — the protocol a model talks (odd last SIG digit = UART, see sigProtocol()). */
+function modelProtocol(model) {
+  return sigProtocol((MODEL_PRODUCT_IDS[model] || MODEL_PRODUCT_IDS[''])[0]);
+}
+
+/**
+ * Keep the model (parameter.ini variant) consistent with the UART/CAN choice.
+ * ENEBDV01/11 is the only UART model, and the model dropdown defaults to the
+ * standard CAN line: picking UART used to leave the CAN parameter.ini loaded,
+ * so 0x0200 / 0x02A1 / 0x0350 ... showed CAN-line meanings and bounds for a
+ * UART controller until a full read happened to auto-switch it.
+ */
+async function alignModelToProtocol() {
+  const proto = document.getElementById('selProtocol').value;
+  if (proto !== 'UART' && proto !== 'CAN') return;
+  const model = currentModel();
+  if (modelProtocol(model) === proto) return;
+  const target = proto === 'UART' ? 'ENEBDV01' : '';
+  log('通訊方式 ' + proto + ' 與機種「' + MODEL_LABELS[model] + '」不符 → 機種自動切換為「' +
+      MODEL_LABELS[target] + '」，重新載入 parameter.ini...');
+  document.getElementById('selModel').value = target;
+  localStorage.setItem(LS_MODEL, target);
+  await autoLoadIni();
+}
+
+/** Model picked → preset UART/CAN to match (only while disconnected; the protocol is locked when connected). */
+function alignProtocolToModel() {
+  const sel   = document.getElementById('selProtocol');
+  const proto = modelProtocol(currentModel());
+  if (sel.value === proto) return;
+  if (state.serial?.isOpen) {
+    log('⚠ 機種「' + MODEL_LABELS[currentModel()] + '」使用 ' + proto + '，但目前以 ' + sel.value +
+        ' 連線，參數說明會與裝置不符。請關閉連線後改選通訊方式。');
+    return;
+  }
+  sel.value = proto;
+  log('通訊方式自動設為 ' + proto + '（依機種「' + MODEL_LABELS[currentModel()] + '」）');
 }
 function lsParamKey(model)     { return model ? `${LS_PARAM}_${model}`      : LS_PARAM; }
 function lsParamNameKey(model) { return model ? `${LS_PARAM_NAME}_${model}` : LS_PARAM_NAME; }
@@ -2764,8 +2806,12 @@ document.getElementById('selModel').addEventListener('change', (e) => {
   state.modelUserSelected = true;
   localStorage.setItem(LS_MODEL, e.target.value);
   log('機種切換 → ' + (e.target.options[e.target.selectedIndex].text) + '，重新載入 parameter.ini...');
+  alignProtocolToModel();
   autoLoadIni();
 });
+// The protocol is not persisted, so start it from the saved model (a UART model
+// with the default CAN protocol would otherwise be inconsistent from the start).
+document.getElementById('selProtocol').value = modelProtocol(currentModel());
 
 // Auto-load INI files on startup
 autoLoadIni();
